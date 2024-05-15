@@ -71,3 +71,6 @@
 [submodule "backends/cadence/hifi/third-party/nnlib"]
 	path = backends/cadence/hifi/third-party/nnlib
 	url = https://github.com/foss-xtensa/nnlib-hifi4.git
+[submodule "backends/cadence/hifi/third-party/nnlib/nnlib-hifi4"]
+	path = backends/cadence/hifi/third-party/nnlib/nnlib-hifi4
+	url = https://github.com/foss-xtensa/nnlib-hifi4.git
