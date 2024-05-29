@@ -11,6 +11,7 @@
 #include <executorch/kernels/portable/cpu/util/functional_util.h>
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include <executorch/runtime/platform/assert.h>
+#include "kernels.h"
 
 namespace torch {
 namespace executor {
@@ -42,6 +43,30 @@ Tensor& add_out(
   CTYPE_IN alpha_val;
   ET_EXTRACT_SCALAR(alpha, alpha_val);
 
+#if 0 //NNLIB_OPT
+  if(alpha_val == 1.0)
+  {
+      const float* const a_data = a.const_data_ptr<float>();
+      const float* const b_data = b.const_data_ptr<float>();
+      float* const out_data = out.mutable_data_ptr<float>();
+      xa_nn_elm_add_f32xf32_f32(out_data, a_data, b_data, out.numel());
+  }
+  else
+  {
+      printf("NNlib not supported\n");
+      apply_binary_elementwise_fn<CTYPE_A, CTYPE_B, CTYPE_OUT>(
+      [alpha_val](const CTYPE_A val_a, const CTYPE_B val_b) {
+        CTYPE_IN a_casted = static_cast<CTYPE_IN>(val_a);
+        CTYPE_IN b_casted = static_cast<CTYPE_IN>(val_b);
+        CTYPE_IN value = a_casted + alpha_val * b_casted;
+
+        return static_cast<CTYPE_OUT>(value);
+      },
+      a,
+      b,
+      out);
+  }
+#else
   apply_binary_elementwise_fn<CTYPE_A, CTYPE_B, CTYPE_OUT>(
       [alpha_val](const CTYPE_A val_a, const CTYPE_B val_b) {
         CTYPE_IN a_casted = static_cast<CTYPE_IN>(val_a);
@@ -53,6 +78,7 @@ Tensor& add_out(
       a,
       b,
       out);
+#endif
 
   return out;
 }

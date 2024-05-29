@@ -37,6 +37,11 @@ extern "C" WORD32 xa_nn_elm_dequantize_asym8u_f32(FLOAT32 * __restrict__ p_out,
                                        FLOAT32  inp_scale,
                                        WORD32   num_elm);
 
+extern "C" WORD32 xa_nn_elm_add_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+                               const FLOAT32 * __restrict__ p_inp1,
+                               const FLOAT32 * __restrict__ p_inp2,
+                               WORD32 num_elm);                                 
+
 namespace impl {
 namespace HiFi {
 namespace kernels {
