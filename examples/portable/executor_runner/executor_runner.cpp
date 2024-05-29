@@ -18,7 +18,7 @@
  */
 
 #include <iostream>
-#include <memory>
+#include <memory> 
 
 #include <gflags/gflags.h>
 
@@ -29,6 +29,12 @@
 #include <executorch/runtime/executor/program.h>
 #include <executorch/runtime/platform/log.h>
 #include <executorch/runtime/platform/runtime.h>
+
+#if __XTENSA__
+#include <sys/times.h> 
+#include <xtensa/sim.h> 
+#include <stdio.h>
+#endif
 
 static uint8_t method_allocator_pool[4 * 1024U * 1024U]; // 4 MB
 
@@ -161,8 +167,22 @@ int main(int argc, char** argv) {
       (uint32_t)inputs.error());
   ET_LOG(Info, "Inputs prepared.");
 
+#if __XTENSA__
+  struct tms start, stop; 
+  xt_iss_client_command("all", "disable"); 
+  xt_iss_client_command("all", "enable"); 
+  times(&start);
+#endif
+
   // Run the model.
   Error status = method->execute();
+
+#if __XTENSA__
+  times(&stop); 
+  xt_iss_client_command("all", "disable"); 
+  //printf("\n execute cycles = %ld\n",(stop.tms_utime - start.tms_utime));
+  ET_LOG(Info, "Execute cycles = %ld", (stop.tms_utime - start.tms_utime));
+#endif
   ET_CHECK_MSG(
       status == Error::Ok,
       "Execution of method %s failed with status 0x%" PRIx32,
