@@ -43,7 +43,7 @@ Tensor& add_out(
   CTYPE_IN alpha_val;
   ET_EXTRACT_SCALAR(alpha, alpha_val);
 
-#if 0 //NNLIB_OPT
+#if NNLIB_OPT
   if(alpha_val == 1.0)
   {
       const float* const a_data = a.const_data_ptr<float>();
