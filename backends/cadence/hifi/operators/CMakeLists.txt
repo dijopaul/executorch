@@ -24,7 +24,13 @@ set(_aten_ops__srcs
     "${CMAKE_CURRENT_SOURCE_DIR}/op_embedding.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/op_full.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/op_view_copy.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/op_mul.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/op_softmax.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/op_tanh.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/op_sigmoid.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_permute_copy.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/pattern/unary_ufunc_realhb_to_floath.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/activation_ops_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/copy_ops_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/broadcast_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/repeat_util.cpp")
