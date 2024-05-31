@@ -36,6 +36,36 @@
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::view_copy_out
+      
+- op: sub.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::sub_out
+      
+- op: mul.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::mul_out
+      
+- op: div.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::div_out      
+
+- op: _softmax.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::softmax_out
+
+- op: tanh.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::tanh_out
+
+- op: sigmoid.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::sigmoid_out       
 
 # custom ops
 - func: cadence::quantize_per_tensor.out(Tensor input, float scale, int zero_point, int quant_min, int quant_max, ScalarType dtype, *, Tensor(a!) out) -> Tensor(a!)

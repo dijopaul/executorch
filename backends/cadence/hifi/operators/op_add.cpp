@@ -53,7 +53,6 @@ Tensor& add_out(
   }
   else
   {
-      printf("NNlib not supported\n");
       apply_binary_elementwise_fn<CTYPE_A, CTYPE_B, CTYPE_OUT>(
       [alpha_val](const CTYPE_A val_a, const CTYPE_B val_b) {
         CTYPE_IN a_casted = static_cast<CTYPE_IN>(val_a);
