@@ -16,6 +16,10 @@
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::add_out
+- op: bmm.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::bmm_out
 
 - op: embedding.out
   kernels:
@@ -50,7 +54,12 @@
 - op: div.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::div_out      
+      kernel_name: torch::executor::div_out
+
+- op: div.out_mode
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::div_out_mode
 
 - op: _softmax.out
   kernels:
@@ -65,7 +74,37 @@
 - op: sigmoid.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::sigmoid_out       
+      kernel_name: torch::executor::sigmoid_out
+
+- op: where.self_out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::where_out
+
+- op: slice_copy.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::slice_copy_Tensor_out
+
+- op: split_with_sizes_copy.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::split_with_sizes_copy_out
+
+- op: cat.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::cat_out
+
+- op: clone.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::clone_out
+
+- op: _to_copy.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::to_copy_out
 
 # custom ops
 - func: cadence::quantize_per_tensor.out(Tensor input, float scale, int zero_point, int quant_min, int quant_max, ScalarType dtype, *, Tensor(a!) out) -> Tensor(a!)

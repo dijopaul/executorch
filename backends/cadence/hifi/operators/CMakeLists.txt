@@ -27,16 +27,25 @@ set(_aten_ops__srcs
     "${CMAKE_CURRENT_SOURCE_DIR}/op_sub.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/op_mul.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/op_div.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/op_bmm.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/op_softmax.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/op_tanh.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/op_sigmoid.cpp"
-    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_permute_copy.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/op_where.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/op_permute_copy.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_cat.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_clone.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_slice_copy.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_split_with_sizes_copy.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_to_copy.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_expand_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/pattern/unary_ufunc_realhb_to_floath.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/activation_ops_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/kernel_ops_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/copy_ops_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/broadcast_util.cpp"
-    "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/repeat_util.cpp")
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/repeat_util.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/index_util.cpp")
 add_library(aten_ops_cadence ${_aten_ops__srcs})
 target_link_libraries(aten_ops_cadence PUBLIC executorch)
 target_link_libraries(aten_ops_cadence PRIVATE cadence_kernels)
