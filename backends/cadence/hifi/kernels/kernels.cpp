@@ -7,10 +7,13 @@
  */
 
 #include "kernels.h"
-#include "NatureDSP_Signal.h"
-#include "NatureDSP_Signal_vector.h"
+//#include "NatureDSP_Signal.h"
+//#include "NatureDSP_Signal_vector.h"
+#include "NatureDSP_Signal_math.h"
+#include "NatureDSP_Signal_matop.h"
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_common_macros.h"
+
 
 namespace impl {
 namespace HiFi {
