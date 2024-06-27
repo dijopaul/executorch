@@ -13,6 +13,8 @@
 #include <executorch/runtime/platform/assert.h>
 #include "kernels.h"
 
+#define NNLIB_OPT 1
+
 namespace torch {
 namespace executor {
 namespace native {
@@ -79,13 +81,41 @@ mul_out(RuntimeContext& ctx, const Tensor& a, const Tensor& b, Tensor& out) {
   ScalarType out_type = out.scalar_type();
   
 #if NNLIB_OPT
+#define NNLIB_MAX_DIM 4  /* Add fallback if broadcast and dim > 4 */
   if((a_type == ScalarType::Float) && (b_type == ScalarType::Float))
   {
-    float* data_a = a.mutable_data_ptr<float>();
-    float* data_b = b.mutable_data_ptr<float>();
-    float* data_out = out.mutable_data_ptr<float>();
-    xa_nn_elm_mul_f32xf32_f32(data_out, data_a, data_b, out.numel());
-  
+    float* a_data = a.mutable_data_ptr<float>();
+    float* b_data = b.mutable_data_ptr<float>();
+    float* out_data = out.mutable_data_ptr<float>();
+    const bool a_is_broadcasted = !out.sizes().equals(a.sizes());
+    const bool b_is_broadcasted = !out.sizes().equals(b.sizes());
+    const bool broadcast = (a_is_broadcasted || b_is_broadcasted);
+    if(broadcast == 1)
+    {
+       int out_shape[NNLIB_MAX_DIM];
+       int inp1_shape[NNLIB_MAX_DIM];
+       int inp2_shape[NNLIB_MAX_DIM];
+       for(int i = 0; i < NNLIB_MAX_DIM; i++)
+       {
+          out_shape[i] = 1;
+          inp1_shape[i] = 1;
+          inp2_shape[i] = 1;
+       }
+       int off_o = NNLIB_MAX_DIM - out.dim();
+       int off_a = NNLIB_MAX_DIM - a.dim();
+       int off_b = NNLIB_MAX_DIM - b.dim();
+       for(int i = 0; i < out.dim(); i++){
+            out_shape[i+off_o] = out.size(i);}
+       for(int i = 0; i < a.dim(); i++)
+            inp1_shape[i+off_a] = a.size(i);
+       for(int i = 0; i < b.dim(); i++)
+            inp2_shape[i+off_b] = b.size(i);
+		xa_nn_elm_mul_broadcast_4D_f32xf32_f32(out_data, out_shape, a_data, inp1_shape, b_data, inp2_shape);
+    }
+    else
+    {
+        xa_nn_elm_mul_f32xf32_f32(out_data, a_data, b_data, out.numel());
+    }
   }
   else
   {

@@ -15,6 +15,8 @@
 #include <cmath>
 #include "kernels.h"
 
+#define NNLIB_OPT 1
+
 namespace torch {
 namespace executor {
 namespace native {
@@ -147,31 +149,139 @@ Tensor& div_out_mode(
       !(common_type != ScalarType::Bool && out_type == ScalarType::Bool),
       InvalidArgument,
       out);
-
-  ET_SWITCH_REAL_TYPES_AND(Bool, a_type, ctx, "div.out_mode", CTYPE_A, [&]() {
-    ET_SWITCH_REAL_TYPES_AND(Bool, b_type, ctx, "div.out_mode", CTYPE_B, [&]() {
-      ET_SWITCH_FLOAT_TYPES(common_type, ctx, "div.out_mode", CTYPE_IN, [&]() {
-        ET_SWITCH_REAL_TYPES(out_type, ctx, "div.out_mode", CTYPE_OUT, [&]() {
-          apply_binary_elementwise_fn<CTYPE_A, CTYPE_B, CTYPE_OUT>(
-              [mode](const CTYPE_A val_a, const CTYPE_B val_b) {
-                CTYPE_IN a_casted = static_cast<CTYPE_IN>(val_a);
-                CTYPE_IN b_casted = static_cast<CTYPE_IN>(val_b);
-                CTYPE_IN value = a_casted / b_casted;
-                if (mode.has_value() && mode.value() == "trunc") {
-                  value = std::trunc(value);
-                } else if (mode.has_value() && mode.value() == "floor") {
-                  value = std::floor(value);
-                }
-                return static_cast<CTYPE_OUT>(value);
-              },
-              a,
-              b,
-              out);
+      
+  /*switch (b_type) {
+    case ScalarType::Bool:
+    {
+        printf("Bool\n");
+        break;
+    }
+    case ScalarType::Byte:
+    {
+         printf("Byte\n");
+          break;
+    }
+    case ScalarType::Short:
+    {
+         printf("Short\n");
+         break;
+    }
+    case ScalarType::Int:
+    {
+        printf("Int\n");
+        break;
+    }
+    case ScalarType::Long:
+    {
+        printf("Long\n");
+        break;
+    }
+    case ScalarType::Half:
+    {
+        printf("Half\n");
+        break;
+    }
+    case ScalarType::Float:
+    {
+        printf("Float\n");
+        break;
+    }
+    case ScalarType::Double:
+    {
+        printf("Double\n");
+        break;
+    }
+    default:
+    {
+        printf("No MATCH\n");
+        break;
+    }
+  }
+    
+      
+  printf("mode = %s\n", mode.value());
+  long long*  a_data = (long long*)a.const_data_ptr<long long>();
+  long long*  b_data = (long long*)b.const_data_ptr<long long>();
+  float * out_data = out.mutable_data_ptr<float>();
+  
+  for(int i = 0; i < out.numel(); i++)
+  {
+    printf("in = %f\n", (float)a_data[i]);
+    printf("in = %f\n", (float)b_data[i]);
+    float value = (float)a_data[i] /(float)b_data[i];
+    printf("value = %f\n", value);
+    if (mode.has_value() && mode.value() == "trunc") {
+      value = std::trunc(value);
+    } else if (mode.has_value() && mode.value() == "floor") {
+      value = std::floor(value);
+    }
+    printf("out = %f\n", value);
+  }*/
+#if NNLIB_OPT 
+  if(common_type == ScalarType::Float)
+  {
+      const float* const a_data = a.const_data_ptr<float>();
+      const float* const b_data = b.const_data_ptr<float>();
+      float* const out_data = out.mutable_data_ptr<float>();
+      int value = 0;
+      if (mode.has_value() && mode.value() == "trunc") 
+        value = 1;
+      else if (mode.has_value() && mode.value() == "floor")
+        value = 2;
+              
+      xa_nn_elm_div_mode_f32xf32_f32(out_data, a_data, b_data, value, out.numel());
+  }
+  else
+  {
+      ET_SWITCH_REAL_TYPES_AND(Bool, a_type, ctx, "div.out_mode", CTYPE_A, [&]() {
+        ET_SWITCH_REAL_TYPES_AND(Bool, b_type, ctx, "div.out_mode", CTYPE_B, [&]() {
+          ET_SWITCH_FLOAT_TYPES(common_type, ctx, "div.out_mode", CTYPE_IN, [&]() {
+            ET_SWITCH_REAL_TYPES(out_type, ctx, "div.out_mode", CTYPE_OUT, [&]() {
+              apply_binary_elementwise_fn<CTYPE_A, CTYPE_B, CTYPE_OUT>(
+                  [mode](const CTYPE_A val_a, const CTYPE_B val_b) {
+                    CTYPE_IN a_casted = static_cast<CTYPE_IN>(val_a);
+                    CTYPE_IN b_casted = static_cast<CTYPE_IN>(val_b);
+                    CTYPE_IN value = a_casted / b_casted;
+                    if (mode.has_value() && mode.value() == "trunc") {
+                      value = std::trunc(value);
+                    } else if (mode.has_value() && mode.value() == "floor") {
+                      value = std::floor(value);
+                    }
+                    return static_cast<CTYPE_OUT>(value);
+                  },
+                  a,
+                  b,
+                  out);
+            });
+          });
         });
-      });
-    });
-  });
-
+      });      
+  }
+#else
+  ET_SWITCH_REAL_TYPES_AND(Bool, a_type, ctx, "div.out_mode", CTYPE_A, [&]() {
+        ET_SWITCH_REAL_TYPES_AND(Bool, b_type, ctx, "div.out_mode", CTYPE_B, [&]() {
+          ET_SWITCH_FLOAT_TYPES(common_type, ctx, "div.out_mode", CTYPE_IN, [&]() {
+            ET_SWITCH_REAL_TYPES(out_type, ctx, "div.out_mode", CTYPE_OUT, [&]() {
+              apply_binary_elementwise_fn<CTYPE_A, CTYPE_B, CTYPE_OUT>(
+                  [mode](const CTYPE_A val_a, const CTYPE_B val_b) {
+                    CTYPE_IN a_casted = static_cast<CTYPE_IN>(val_a);
+                    CTYPE_IN b_casted = static_cast<CTYPE_IN>(val_b);
+                    CTYPE_IN value = a_casted / b_casted;
+                    if (mode.has_value() && mode.value() == "trunc") {
+                      value = std::trunc(value);
+                    } else if (mode.has_value() && mode.value() == "floor") {
+                      value = std::floor(value);
+                    }
+                    return static_cast<CTYPE_OUT>(value);
+                  },
+                  a,
+                  b,
+                  out);
+            });
+          });
+        });
+      });      
+#endif
   return out;
 }
 

@@ -14,6 +14,8 @@
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include "kernels.h"
 
+#define NNLIB_OPT 1
+
 namespace torch {
 namespace executor {
 namespace native {

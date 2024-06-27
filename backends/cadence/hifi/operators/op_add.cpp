@@ -17,6 +17,8 @@ namespace torch {
 namespace executor {
 namespace native {
 
+#define NNLIB_OPT 1
+
 Tensor& add_out(
     RuntimeContext& ctx,
     const Tensor& a,
@@ -46,10 +48,40 @@ Tensor& add_out(
 #if NNLIB_OPT
   if(alpha_val == 1.0)
   {
+      int broadcast = 1; /* Add logic to find broadcast */
       const float* const a_data = a.const_data_ptr<float>();
       const float* const b_data = b.const_data_ptr<float>();
       float* const out_data = out.mutable_data_ptr<float>();
-      xa_nn_elm_add_f32xf32_f32(out_data, a_data, b_data, out.numel());
+      if(broadcast == 1)
+      {
+         int out_shape[4];
+         int inp1_shape[4];
+         int inp2_shape[4];
+         
+         for(int i = 0; i < 4; i++)
+         {
+            out_shape[i] = 1;
+            inp1_shape[i] = 1;
+            inp2_shape[i] = 1;
+         }
+                  
+         int off_o = 4 - out.dim();
+         int off_a = 4 - a.dim();
+         int off_b = 4 - b.dim();
+         
+         for(int i = 0; i < out.dim(); i++)
+             out_shape[i+off_o] = out.size(i);
+         for(int i = 0; i < a.dim(); i++)
+             inp1_shape[i+off_a] = a.size(i);
+         for(int i = 0; i < b.dim(); i++)
+             inp2_shape[i+off_b] = b.size(i);
+         
+         xa_nn_elm_add_broadcast_4D_f32xf32_f32(out_data, out_shape, a_data, inp1_shape,
+                                                b_data, inp2_shape);
+      }                      
+      else
+        xa_nn_elm_add_f32xf32_f32(out_data, a_data, b_data, out.numel());
+      
   }
   else
   {

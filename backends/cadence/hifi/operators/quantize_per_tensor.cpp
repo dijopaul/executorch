@@ -9,6 +9,8 @@
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include "kernels.h"
 
+#define NNLIB_OPT 1
+
 namespace impl {
 namespace HiFi {
 namespace native {

@@ -12,6 +12,8 @@
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include "kernels.h"
 
+#define NNLIB_OPT 1
+
 namespace torch {
 namespace executor {
 namespace native {
@@ -36,7 +38,7 @@ Tensor& sigmoid_out(RuntimeContext& ctx, const Tensor& in, Tensor& out) {
   ScalarType in_type = in.scalar_type();
   ScalarType out_type = out.scalar_type();
   
-#if 0//NNLIB_OPT  
+#if NNLIB_OPT  
   if(in_type == ScalarType::Float)
   {
     float* data_in = in.mutable_data_ptr<float>();
