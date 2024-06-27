@@ -19,7 +19,8 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "common_fpu.h"
+//#include "common_fpu.h"
+#include "xa_nnlib_common_fpu.h"
 #include "xa_nnlib_common.h"
 #include "xa_nn_basic_state.h"
 #include "xa_nnlib_common_macros.h"
