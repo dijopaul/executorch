@@ -16,6 +16,14 @@
 #include "xa_nnlib_kernels_api.h"
                               
 
+/* new functions in nnlib */
+extern "C"  WORD32 xa_nn_elm_add_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+                                const WORD32 *const p_out_shape,
+                                const FLOAT32 * __restrict__ p_inp1,
+                                const WORD32 *const p_inp1_shape,
+                                const FLOAT32 * __restrict__ p_inp2,
+                                const WORD32 *const p_inp2_shape);
+
 namespace impl {
 namespace HiFi {
 namespace kernels {
