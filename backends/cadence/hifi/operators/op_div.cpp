@@ -19,6 +19,8 @@
 namespace torch {
 namespace executor {
 namespace native {
+    
+#define NNLIB_MAX_DIM 4  /* Add fallback if broadcast and dim > 4 */
 
 namespace {
 
@@ -71,20 +73,20 @@ div_out(RuntimeContext& ctx, const Tensor& a, const Tensor& b, Tensor& out) {
       const FLOAT32 * __restrict__ p_inp1 = (const FLOAT32 * __restrict__)a.const_data_ptr<float>();
       const FLOAT32 * __restrict__ p_inp2 = (const FLOAT32 * __restrict__)b.const_data_ptr<float>();
       
-      WORD32 p_out_shape[4];
-      WORD32 p_inp1_shape[4];
-      WORD32 p_inp2_shape[4];
+      WORD32 p_out_shape[NNLIB_MAX_DIM];
+      WORD32 p_inp1_shape[NNLIB_MAX_DIM];
+      WORD32 p_inp2_shape[NNLIB_MAX_DIM];
       
-      for(int i = 0; i < 4; i++)
+      for(int i = 0; i < NNLIB_MAX_DIM; i++)
       {
         p_inp1_shape[i] = 1;
         p_inp2_shape[i] = 1;
         p_out_shape[i] = 1;
       }
         
-      int off_o = 4 - out.dim();        
-      int off_a = 4 - a.dim();
-      int off_b = 4 - b.dim();
+      int off_o = NNLIB_MAX_DIM - out.dim();        
+      int off_a = NNLIB_MAX_DIM - a.dim();
+      int off_b = NNLIB_MAX_DIM - b.dim();
 
       for(int i = 0; i < out.dim(); i++)
         p_out_shape[i+off_o] = out.size(i);
@@ -185,20 +187,20 @@ Tensor& div_out_mode(
       const FLOAT32 * __restrict__ p_inp1 = (const FLOAT32 * __restrict__)a.const_data_ptr<float>();
       const FLOAT32 * __restrict__ p_inp2 = (const FLOAT32 * __restrict__)b.const_data_ptr<float>();
       
-      WORD32 p_out_shape[4];
-      WORD32 p_inp1_shape[4];
-      WORD32 p_inp2_shape[4];
+      WORD32 p_out_shape[NNLIB_MAX_DIM];
+      WORD32 p_inp1_shape[NNLIB_MAX_DIM];
+      WORD32 p_inp2_shape[NNLIB_MAX_DIM];
       
-      for(int i = 0; i < 4; i++)
+      for(int i = 0; i < NNLIB_MAX_DIM; i++)
       {
         p_inp1_shape[i] = 1;
         p_inp2_shape[i] = 1;
         p_out_shape[i] = 1;
       }
         
-      int off_o = 4 - out.dim();        
-      int off_a = 4 - a.dim();
-      int off_b = 4 - b.dim();
+      int off_o = NNLIB_MAX_DIM - out.dim();        
+      int off_a = NNLIB_MAX_DIM - a.dim();
+      int off_b = NNLIB_MAX_DIM - b.dim();
 
       for(int i = 0; i < out.dim(); i++)
         p_out_shape[i+off_o] = out.size(i);
