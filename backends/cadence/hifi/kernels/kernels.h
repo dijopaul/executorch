@@ -14,13 +14,6 @@
 
 /* For NNLIB APIs */
 #include "xa_nnlib_kernels_api.h"
-                              
-
-namespace impl {
-namespace HiFi {
-namespace kernels {
-
-void memcpy(void* dst, const void* src, size_t num_bytes);
 
 extern "C" WORD32 xa_nn_elm_floor_div_f32xf32_f32(
                                     FLOAT32 * __restrict__ p_out,
@@ -43,13 +36,13 @@ extern "C" WORD32 xa_nn_elm_div_broadcast_4D_f32xf32_f32(
                                     const WORD32 *const p_inp1_shape,
                                     const FLOAT32 * __restrict__ p_inp2,
                                     const WORD32 *const p_inp2_shape);
+                              
 
-extern "C" 	WORD32 xa_nn_elm_div_f32xf32_f32(
-                                    FLOAT32 * __restrict__ p_out,
-                                    const FLOAT32 * __restrict__ p_inp1,
-                                    const FLOAT32 * __restrict__ p_inp2,
-                                    WORD32 num_elm);
-                                    
+namespace impl {
+namespace HiFi {
+namespace kernels {
+
+void memcpy(void* dst, const void* src, size_t num_bytes);
 
 WORD32 matmul_asym8uxasym8u_asym8u(
     UWORD8* __restrict__ p_out, // output uint8 matrix
