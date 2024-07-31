@@ -23,6 +23,7 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_add.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_embedding.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_full.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_where.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_view_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/activation_ops_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/copy_ops_util.cpp"
