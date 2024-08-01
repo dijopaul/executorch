@@ -101,6 +101,11 @@
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::where_out
+      
+- op: rsqrt.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::rsqrt_out        
 
 - op: empty.out
   kernels:
