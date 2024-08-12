@@ -35,13 +35,10 @@ Tensor& rsqrt_out(RuntimeContext& ctx, const Tensor& in, Tensor& out) {
                         p_out,
                         p_inp,
                         num_elm); 
-              
-    return out;
-  }
+  return out;
+  }              
   else
-  {
     return internal::unary_ufunc_realhb_to_floath(rsqrt, ctx, in, out);
-  }
 
 }
 

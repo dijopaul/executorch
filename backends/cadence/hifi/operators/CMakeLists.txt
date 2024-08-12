@@ -36,7 +36,22 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_cat.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_clone.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_div.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_floor_divide.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_fmod.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_rsqrt.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_lt.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_le.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_gt.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_ge.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_eq.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_ne.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_pow.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_atan2.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_remainder.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_rsqrt.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bitwise_and.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bitwise_or.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bitwise_xor.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_mul.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_permute_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_sigmoid.cpp"
@@ -62,7 +77,7 @@ target_include_directories(aten_ops_cadence PUBLIC ${ROOT_DIR}/..
 add_library(
   custom_ops "quantized_linear_out.cpp"
   "quantized_layer_norm.cpp"
-  "quantize_per_tensor.cpp" "dequantize_per_tensor.cpp")
+  "quantize_per_tensor.cpp" "dequantize_per_tensor.cpp" "quantized_matmul_out.cpp" "quantized_relu_out.cpp" "quantized_conv_out.cpp")
 target_include_directories(custom_ops PUBLIC ${ROOT_DIR}/..
                                              ${CMAKE_BINARY_DIR}
                                              ${_common_include_directories})

@@ -20,7 +20,7 @@
 - op: _softmax.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::softmax_out
+        kernel_name: torch::executor::softmax_out
 
 - op: add.out
   kernels:
@@ -66,6 +66,16 @@
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::mul_out
+      
+- op: mul.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::mul_scalar_out      
+      
+- op: mean.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::mean_dim_out      
 
 - op: permute_copy.out
   kernels:
@@ -101,6 +111,11 @@
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::where_out
+      
+- op: rsqrt.out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::rsqrt_out      
 
 # custom ops
 - func: cadence::quantize_per_tensor.out(Tensor input, float scale, int zero_point, int quant_min, int quant_max, ScalarType dtype, *, Tensor(a!) out) -> Tensor(a!)
@@ -134,3 +149,8 @@
   kernels:
     - arg_meta: null
       kernel_name: impl::reference::quantized_relu_out
+      
+- func: cadence::quantized_matmul.out(Tensor X, int X_zero_point, Tensor Y, int Y_zero_point, Tensor? bias, int out_multiplier, int out_shift, int out_zero_point, bool transposed, *, Tensor(a!) out) -> Tensor(a!)
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::reference::quantized_matmul_out      

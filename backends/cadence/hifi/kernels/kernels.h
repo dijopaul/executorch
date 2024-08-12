@@ -15,6 +15,87 @@
 /* For NNLIB APIs */
 #include "xa_nnlib_kernels_api.h"
 
+extern "C" WORD32 xa_nn_elm_logicalxor_boolxbool_bool(
+                                    WORD8 * __restrict__ p_out,
+                                    const   WORD8 * __restrict__ p_inp1,
+                                    const   WORD8 * __restrict__ p_inp2,
+                                            WORD32  num_elm);
+
+extern "C" WORD32 xa_nn_elm_remainder_f32xf32_f32(
+                                    FLOAT32 * __restrict__ p_out,
+                                    const FLOAT32 * __restrict__ p_inp1,
+                                    const FLOAT32 * __restrict__ p_inp2,
+                                    WORD32 num_elm);
+                                    
+extern "C" WORD32 xa_nn_elm_remainder_broadcast_4D_f32xf32_f32(
+                                    FLOAT32 * __restrict__ p_out,
+                                    const WORD32 *const p_out_shape,
+                                    const FLOAT32 * __restrict__ p_inp1,
+                                    const WORD32 *const p_inp1_shape,
+                                    const FLOAT32 * __restrict__ p_inp2,
+                                    const WORD32 *const p_inp2_shape);
+
+extern "C" WORD32 xa_nn_elm_fmod_f32xf32_f32(
+                                    FLOAT32 * __restrict__ p_out,
+                                    const FLOAT32 * __restrict__ p_inp1,
+                                    const FLOAT32 * __restrict__ p_inp2,
+                                    WORD32 num_elm);
+                                    
+extern "C" WORD32 xa_nn_elm_fmod_broadcast_4D_f32xf32_f32(
+                                    FLOAT32 * __restrict__ p_out,
+                                    const WORD32 *const p_out_shape,
+                                    const FLOAT32 * __restrict__ p_inp1,
+                                    const WORD32 *const p_inp1_shape,
+                                    const FLOAT32 * __restrict__ p_inp2,
+                                    const WORD32 *const p_inp2_shape);
+
+extern "C" WORD32 xa_nn_elm_floor_div_f32xf32_f32(
+                                    FLOAT32 * __restrict__ p_out,
+                                    const FLOAT32 * __restrict__ p_inp1,
+                                    const FLOAT32 * __restrict__ p_inp2,
+                                    WORD32 num_elm);
+                                    
+extern "C" WORD32 xa_nn_elm_floor_div_broadcast_4D_f32xf32_f32(
+                                    FLOAT32 * __restrict__ p_out,
+                                    const WORD32 *const p_out_shape,
+                                    const FLOAT32 * __restrict__ p_inp1,
+                                    const WORD32 *const p_inp1_shape,
+                                    const FLOAT32 * __restrict__ p_inp2,
+                                    const WORD32 *const p_inp2_shape);                                
+
+extern "C" WORD32 xa_nn_broadcast_32_32( 
+                                    WORD32* __restrict__ p_out,
+                                    const int *const out_shape,         
+                                    WORD32* __restrict__ p_in,   
+                                    const int * const in_shape,  
+                                    int num_dims);
+
+extern "C" WORD32 xa_nn_elm_greater_lesser_equal_f32xf32_f32(
+                                    WORD8 * __restrict__ p_out,
+                                    const FLOAT32 * __restrict__ p_inp1,
+                                    const FLOAT32 * __restrict__ p_inp2,
+                                    WORD32 num_elm,
+                                    WORD32 kernel_type);
+                                    
+extern "C" WORD32 xa_nn_elm_greater_lesser_equal_broadcast_4D_f32xf32_f32(
+                                    WORD8 * __restrict__ p_out,
+                                    const WORD32 *const p_out_shape,
+                                    const FLOAT32 * __restrict__ p_inp1,
+                                    const WORD32 *const p_inp1_shape,
+                                    const FLOAT32 * __restrict__ p_inp2,
+                                    const WORD32 *const p_inp2_shape,
+                                    WORD32 kernel_type);                                    
+
+extern "C" WORD32 xa_nn_concat_32_32(
+                                    WORD32 * __restrict__ p_out,
+                                    const WORD32 *const p_out_shape,
+                                    const WORD32 **pp_inps,
+                                    const WORD32 *const *pp_inps_shape,
+                                    WORD32 num_out_dims,
+                                    WORD32 num_inp,
+                                    WORD32 num_inp_dims,
+                                    WORD32 axis);
+
 extern "C" WORD32 xa_nn_elm_floor_div_f32xf32_f32(
                                     FLOAT32 * __restrict__ p_out,
                                     const FLOAT32 * __restrict__ p_inp1,
