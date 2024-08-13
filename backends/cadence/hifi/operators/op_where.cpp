@@ -52,10 +52,11 @@ Tensor& where_out(
       const int broadcast = (a_is_broadcasted || b_is_broadcasted || cond_is_broadcasted);
 
       int max_dim = a.dim() > b.dim() ? a.dim() : b.dim();
+      max_dim = cond.dim() > max_dim ? cond.dim() : max_dim;
       max_dim = out.dim() > max_dim ? out.dim() : max_dim;
       bool fall_back = 0;
-      if((a_type != ScalarType::Float) || (b_type != ScalarType::Float))
-        fall_back = 1;
+      if((a_type != ScalarType::Float) || (b_type != ScalarType::Float) || (cond_type != ScalarType::Float))
+          fall_back = 1;
     
       if((broadcast == 1) && (max_dim > NNLIB_MAX_DIM))
           fall_back = 1;
@@ -97,7 +98,7 @@ if(!fall_back)
          for(int i = 0; i < cond.dim(); i++)
             con_shape[i+off_c] = cond.size(i);
 
-        /* Add fallback if broadcast and condition dimension are larger than inputs dimension */
+        /* Add fallback if broadcast and condition dimension are larger than inputs dimension, this code doesn't support that*/
 
         if(con_shape[0] != out_shape[0] || con_shape[1] != out_shape[1] || con_shape[2] != out_shape[2] || con_shape[3] != out_shape[3])
         {
