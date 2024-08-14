@@ -33,7 +33,7 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/reduce_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/repeat_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_bmm.cpp"
-    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_cat.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_cat.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_clone.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_div.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_floor_divide.cpp"
@@ -52,6 +52,8 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bitwise_and.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bitwise_or.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bitwise_xor.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_where.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_scalar_tensor.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_mul.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_permute_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_sigmoid.cpp"
@@ -61,7 +63,9 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_sub.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_to_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_where.cpp"
-    "${EXECUTORCH_ROOT}/kernels/portable/cpu/pattern/unary_ufunc_realhb_to_floath.cpp")
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/pattern/unary_ufunc_realhb_to_floath.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_empty.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_gelu.cpp")
 add_library(aten_ops_cadence ${_aten_ops__srcs})
 target_link_libraries(aten_ops_cadence PUBLIC executorch)
 target_link_libraries(aten_ops_cadence PRIVATE cadence_kernels)
