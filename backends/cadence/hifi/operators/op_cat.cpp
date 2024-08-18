@@ -9,10 +9,9 @@
 #include <executorch/runtime/kernel/kernel_includes.h>
 
 #include <cstring>
-#include <executorch/kernels/portable/cpu/util/copy_ops_util.cpp>
+#include <executorch/kernels/portable/cpu/util/copy_ops_util.h>
 
 #include "kernels.h"
-#include "stdio.h"
 
 namespace torch {
 namespace executor {
@@ -26,9 +25,9 @@ Tensor& cat_out(
     int64_t dim,
     Tensor& out) {
   
-  if(out.scalar_type()== ScalarType::Float){
+  if(out.scalar_type() == ScalarType::Float){
     WORD32 num_inp = tensors.size();
-    WORD32 num_inp_dims = tensors[0].dim();
+    WORD32 num_inp_dims = out.dim();
     WORD32 num_out_dims = num_inp_dims;
     WORD32 axis = dim;
     
@@ -38,19 +37,26 @@ Tensor& cat_out(
     WORD32 *ptr_shape[16];
     const WORD32 *ptr[16];
     
+    int k = 0;
+    int count = 0;
     for(int i = 0; i < num_inp; i++)
     {
-      ptr[i] = (const WORD32 *)tensors[i].const_data_ptr<float>();
+      if(tensors[i].numel() == 0)
+        continue;
+      ptr[k] = (const WORD32 *)tensors[i].const_data_ptr<float>();
       for(int j = 0; j < num_inp_dims; j++)
       {
-        inp_shape[i][j] = tensors[i].size(j);
-        if(j == axis)
-          p_out_shape[j] += inp_shape[i][j];
-        else
-          p_out_shape[j] = inp_shape[i][j];
+          inp_shape[k][j] = tensors[i].size(j);
       }
-      
-      ptr_shape[i] = inp_shape[i];
+      ptr_shape[k] = inp_shape[k];
+      k++;
+    }
+    
+    num_inp = k;
+    
+    for(int i = 0; i < num_out_dims; i++)
+    {
+      p_out_shape[i] = out.size(i);
     }
     
     const WORD32 **pp_inps = &ptr[0];
@@ -60,50 +66,6 @@ Tensor& cat_out(
     const WORD32 *const *pp_inps_shape = (const WORD32 *const *)&ptr_shape[0];
     
     WORD32 val = xa_nn_concat_32_32(p_out
-                                  ,p_out_shape
-                                  ,pp_inps
-                                  ,pp_inps_shape
-                                  ,num_out_dims
-                                  ,num_inp
-                                  ,num_inp_dims
-                                  ,axis);   
-    
-    return out;
-  }
-  else if(out.scalar_type() == ScalarType::Char){
-    WORD32 num_inp = tensors.size();
-    WORD32 num_inp_dims = tensors[0].dim();
-    WORD32 num_out_dims = num_inp_dims;
-    WORD32 axis = dim;
-    
-    WORD32 inp_shape[16][16];
-    WORD32 p_out_shape[16] = {0};
-    
-    WORD32 *ptr_shape[16];
-    const WORD8 *ptr[16];
-    
-    for(int i = 0; i < num_inp; i++)
-    {
-      ptr[i] = (const WORD8 *)tensors[i].const_data_ptr<char>();
-      for(int j = 0; j < num_inp_dims; j++)
-      {
-        inp_shape[i][j] = tensors[i].size(j);
-        if(j == axis)
-          p_out_shape[j] += inp_shape[i][j];
-        else
-          p_out_shape[j] = inp_shape[i][j];
-      }
-      
-      ptr_shape[i] = inp_shape[i];
-    }
-    
-    const WORD8 **pp_inps = &ptr[0];
-    
-    WORD8 * p_out = (WORD8 *)out.mutable_data_ptr<char>();
-    
-    const WORD32 *const *pp_inps_shape = (const WORD32 *const *)&ptr_shape[0];
-    
-    WORD32 val = xa_nn_concat_8_8(p_out
                                   ,p_out_shape
                                   ,pp_inps
                                   ,pp_inps_shape
@@ -172,7 +134,6 @@ Tensor& cat_out(
   }  
 
   return out;
-#endif
 }
 
 } // namespace native
