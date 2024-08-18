@@ -38,7 +38,6 @@ Tensor& cat_out(
     const WORD32 *ptr[16];
     
     int k = 0;
-    int count = 0;
     for(int i = 0; i < num_inp; i++)
     {
       if(tensors[i].numel() == 0)
