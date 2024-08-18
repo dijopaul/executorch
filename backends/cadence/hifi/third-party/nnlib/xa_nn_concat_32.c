@@ -48,6 +48,7 @@ WORD32 xa_nn_concat_32_32(WORD32 * __restrict__ p_out
     {
       XA_NNLIB_ARG_CHK_COND((pp_inps_shape[i][j] != p_out_shape[j] && j != axis), -1);
     }
+    
     XA_NNLIB_ARG_CHK_COND((pp_inps_shape[i][axis] <= 0), -1);
     concat_size += pp_inps_shape[i][axis];
   }
@@ -87,7 +88,7 @@ WORD32 xa_nn_concat_32_32(WORD32 * __restrict__ p_out
           ae_f32 *pae_out = (ae_f32 *)output_ptr;
 #pragma concurrent
 #pragma no_simd
-          for(int ic = 0; ic < (copy_size >> 1); ic++)
+          for(int ic = 0; ic < copy_size; ic++)
           {
             *pae_out++ = *pae_inp++;
           }
@@ -113,9 +114,9 @@ WORD32 xa_nn_concat_32_32(WORD32 * __restrict__ p_out
           const ae_f32 *puae_inp = (const ae_f32 *)pae_inp;
           ae_f32 *puae_out = (ae_f32 *)pae_out;
 #pragma concurrent
-          for(int ic = 0; ic < ((copy_size >> 1) & 3); ic++)
+          for(int ic = 0; ic < (copy_size & 1); ic++)
           {
-            puae_out[ic] = puae_inp[ic];
+            puae_out[copy_size - 1] = puae_inp[copy_size - 1];
           }
           input_ptr += copy_size;
           output_ptr += concat_size * base_inner_size;
@@ -147,19 +148,18 @@ WORD32 xa_nn_concat_32_32(WORD32 * __restrict__ p_out
           inp_a = AE_LA64_PP(pae_inp);
           out_a = AE_ZALIGN64();
 
-          int copy_size_by6 = AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(copy_size, 0x2AAAAAAB)));
-          int copy_size_rem_start = 6*copy_size_by6;
 #pragma concurrent
-          for(int ic = 0; ic < copy_size_by6; ic++)
+          for(int ic = 0; ic < copy_size >> 1; ic++)
           {
             ae_int32x2 d0;
             AE_LA32X2_IP(d0, inp_a, pae_inp);
             AE_SA32X2_IP(d0, out_a, pae_out);
           }
           AE_SA64POS_FP(out_a, pae_out);
-          for(int ic = copy_size_rem_start; ic < copy_size; ic++)
+          
+          for(int ic = 0; ic < (copy_size & 1); ic++)
           {
-            output_ptr[ic] = input_ptr[ic];
+            output_ptr[copy_size - 1] = input_ptr[copy_size - 1];
           }
           input_ptr += copy_size;
           output_ptr += concat_size * base_inner_size;
