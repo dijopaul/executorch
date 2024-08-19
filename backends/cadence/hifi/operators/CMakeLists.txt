@@ -20,9 +20,11 @@ endif()
 
 # ATen compliant ops that are needed to run this model.
 set(_aten_ops__srcs
-    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_add.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_add.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_embedding.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_full.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_view_copy.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_where.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_view_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/activation_ops_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/copy_ops_util.cpp"
@@ -35,6 +37,10 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_bmm.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_cat.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_clone.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_div.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_mul.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_permute_copy.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sigmoid.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_div.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_floor_divide.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_fmod.cpp"
@@ -58,14 +64,15 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_permute_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_sigmoid.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_slice_copy.cpp"
-    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_softmax.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_softmax.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_split_with_sizes_copy.cpp"
-    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_sub.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sub.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_to_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_where.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/pattern/unary_ufunc_realhb_to_floath.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_empty.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_gelu.cpp")
+
 add_library(aten_ops_cadence ${_aten_ops__srcs})
 target_link_libraries(aten_ops_cadence PUBLIC executorch)
 target_link_libraries(aten_ops_cadence PRIVATE cadence_kernels)
@@ -82,6 +89,7 @@ add_library(
   custom_ops "quantized_linear_out.cpp"
   "quantized_layer_norm.cpp"
   "quantize_per_tensor.cpp" "dequantize_per_tensor.cpp" "quantized_matmul_out.cpp" "quantized_relu_out.cpp" "quantized_conv_out.cpp")
+
 target_include_directories(custom_ops PUBLIC ${ROOT_DIR}/..
                                              ${CMAKE_BINARY_DIR}
                                              ${_common_include_directories})

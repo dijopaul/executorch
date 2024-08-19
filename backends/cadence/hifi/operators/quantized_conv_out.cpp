@@ -12,8 +12,8 @@
 #include <algorithm>
 #include <cmath>
 
-#define ALIGN_PTR(x, bytes)     ((((unsigned)(x))+(bytes-1))&(~(bytes-1)))
 
+#define ALIGN_PTR(x, bytes)     ((((unsigned)(x))+(bytes-1))&(~(bytes-1)))
 #define NNLIB_OPT 0
 
 namespace impl {
@@ -23,6 +23,7 @@ namespace native {
 using Tensor = exec_aten::Tensor;
 using RuntimeContext = torch::executor::RuntimeContext;
 using ScalarType = exec_aten::ScalarType;
+
 
 // This implements a generic 2d conv kernel that operates on raw pointers.
 // The version handles both quantized and fp32 convolutions.
@@ -113,9 +114,11 @@ __attribute__((noinline)) void conv2d_nchw_core_generic(
                     int woff = _wh * ww + _ww;
                     float lhs = in_plane[ioff] - in_zero_point;
                     float rhs = weight_plane[woff] -
+
                       (quantized ? 0 : 0);
                     /*float rhs = weight_plane[woff] -
                     (quantized ? weight_zero_point[0] : 0);*/
+
                     acc += lhs * rhs;
                   }
                 }
@@ -131,14 +134,17 @@ __attribute__((noinline)) void conv2d_nchw_core_generic(
                         ((_w + d1 * _ww - p1) >= 0) &&
                         ((_w + d1 * _ww - p1) < w)) {
                         //((_w + d1 * _ww - p1 < w))) {
+
                       int ioff =
                           (_h + d0 * _wh - p0) * w + (_w + d1 * _ww - p1);
                       int woff = _wh * ww + _ww;
                       float lhs = in_plane[ioff] - in_zero_point;
                       float rhs = weight_plane[woff] -
+
                       (quantized ? 0 : 0);
                       /*float rhs = weight_plane[woff] -
                       (quantized ? weight_zero_point[0] : 0);*/
+
                       acc += lhs * rhs;
                     }
                   }
@@ -543,7 +549,6 @@ void quantized_conv_out(
   }
   
 #else  
-  
   // input = [n, c, h, w]
   const int n = input.size(0);
   const int c = input.size(1);
