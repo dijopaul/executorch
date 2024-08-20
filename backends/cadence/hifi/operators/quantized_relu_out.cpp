@@ -47,5 +47,5 @@ void quantized_relu_out(
 }
 
 }; // namespace native
-}; // namespace reference
+}; // namespace HiFi
 }; // namespace impl
