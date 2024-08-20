@@ -61,6 +61,7 @@ Tensor& where_out(
   {
     if(cond.size(i) > b.size(i))
       check = 1;
+
     
     if(check == 1)
       break;
@@ -125,6 +126,7 @@ Tensor& where_out(
           xa_nn_elm_where_broadcast_4D_f32xf32_f32(out_data, out_shape, a_data, inp1_shape,
                                                   b_data, inp2_shape, p_brd_cond, con_shape);
           free(p_scratch);
+
       }
       else
       {
