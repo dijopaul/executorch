@@ -63,6 +63,7 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bitwise_xor.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_where.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_scalar_tensor.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_mean.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_mul.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_permute_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_sigmoid.cpp"
