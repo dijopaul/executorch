@@ -9,6 +9,8 @@
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include "kernels.h"
 
+#define NNLIB_OPT 1
+
 namespace impl {
 namespace HiFi {
 namespace native {
@@ -37,10 +39,29 @@ void quantized_relu_out(
     const Tensor& input,
     const Tensor& in_zero_point,
     Tensor& output) {
+        
   if (input.scalar_type() == exec_aten::ScalarType::Byte) {
+#if NNLIB_OPT
+    const uint8_t *p_in = input.const_data_ptr<uint8_t>();
+    uint8_t *p_out =output.mutable_data_ptr<uint8_t>();
+    uint8_t q_zero_point = in_zero_point.const_data_ptr<uint8_t>()[0];
+    /*xa_nn_vec_relu_asym8u_asym8u( p_out, p_in, 0, 0x7FFFFFFF, 0, 0, 0,
+                            (WORD32)q_zero_point,
+                            input.numel());*/
+    xa_nn_vec_relu_8u_8u_custom(p_out, p_in, q_zero_point, input.numel());                    
+#else
     quantized_relu_<uint8_t>(input, in_zero_point, output);
+#endif
+
   } else if (input.scalar_type() == exec_aten::ScalarType::Char) {
+#if NNLIB_OPT
+    const int8_t *p_in = input.const_data_ptr<int8_t>();
+    int8_t *p_out = output.mutable_data_ptr<int8_t>();
+    int8_t q_zero_point = in_zero_point.const_data_ptr<int8_t>()[0];
+    xa_nn_vec_relu_8_8_custom(p_out, p_in, q_zero_point, input.numel());
+#else    
     quantized_relu_<int8_t>(input, in_zero_point, output);
+#endif    
   } else {
     ET_CHECK_MSG(false, "Unhandled input dtype %hhd", input.scalar_type());
   }

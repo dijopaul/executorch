@@ -211,6 +211,12 @@ extern "C" WORD32 xa_nn_transpose_32_32(WORD32 * __restrict__ p_out
                     ,const WORD32 * __restrict__ p_permute_vec
                     ,WORD32 num_out_dims
                     ,WORD32 num_inp_dims);
+                    
+extern "C" WORD32 xa_nn_vec_relu_8u_8u_custom(UWORD8 * __restrict__ p_out, const UWORD8  * __restrict__ p_vec,
+                                               UWORD8 q_zero_point, WORD32 vec_length);
+
+extern "C" WORD32 xa_nn_vec_relu_8_8_custom(WORD8 * __restrict__ p_out, const WORD8  * __restrict__ p_vec,
+                                             WORD8 q_zero_point, WORD32 vec_length);                         
 
 namespace impl {
 namespace HiFi {
