@@ -98,18 +98,23 @@ Tensor& sub_out(
 
   constexpr auto name = "sub.out";
   
-  
   int a_dim = a.dim(), b_dim = b.dim(), out_dim = out.dim();
   int fall_back = 0;
+  /*find broadcast*/
+  const int a_is_broadcasted = !out.sizes().equals(a.sizes());
+  const int b_is_broadcasted = !out.sizes().equals(b.sizes());
+  const int broadcast = (a_is_broadcasted || b_is_broadcasted);
+  int max_dim = a.dim() > b.dim() ? a.dim() : b.dim();
+  max_dim = out.dim() > max_dim ? out.dim() : max_dim;
+  
+  if( (out_type != ScalarType::Float) || (alpha_val != 1.0))
+    fall_back = 1;
   
   if( (a_dim == 0) || (b_dim == 0) )
-  {
     fall_back = 1;
-  }
-  if( (out_type != ScalarType::Float) || (alpha_val != 1.0))
-  {
+
+  if((broadcast == 1) && (max_dim > NNLIB_MAX_DIM))
     fall_back = 1;
-  }
   
 
   if(!fall_back)
