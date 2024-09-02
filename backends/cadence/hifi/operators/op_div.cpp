@@ -12,7 +12,7 @@
 #include <executorch/kernels/portable/cpu/util/math_util.h>
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include <executorch/runtime/platform/assert.h>
-#include <cmath>
+#include <cmath> 
 
 #include "kernels.h"
 
@@ -61,59 +61,60 @@ div_out(RuntimeContext& ctx, const Tensor& a, const Tensor& b, Tensor& out) {
 
   ET_KERNEL_CHECK(ctx, tensor_is_real_type(out), InvalidArgument, out);
   
-  if((a.scalar_type() == ScalarType::Float)||(b.scalar_type() == ScalarType::Float))
-  {
-    const bool a_is_broadcasted = !out.sizes().equals(a.sizes());
-    const bool b_is_broadcasted = !out.sizes().equals(b.sizes());
-    const bool any_is_broadcasted = (a_is_broadcasted || b_is_broadcasted);
+  int a_dim = a.dim(), b_dim = b.dim(), out_dim = out.dim();
+  int fall_back = 0;
+  /*find broadcast*/
+  const int a_is_broadcasted = !out.sizes().equals(a.sizes());
+  const int b_is_broadcasted = !out.sizes().equals(b.sizes());
+  const int broadcast = (a_is_broadcasted || b_is_broadcasted);
+  int max_dim = a.dim() > b.dim() ? a.dim() : b.dim();
+  max_dim = out.dim() > max_dim ? out.dim() : max_dim;
+  
+  if((a_type != ScalarType::Float) || (b_type != ScalarType::Float))
+    fall_back = 1;
+  
+  if( (a_dim == 0) || (b_dim == 0) )
+    fall_back = 1;
 
-    if(any_is_broadcasted)
+  if((broadcast == 1) && (max_dim > NNLIB_MAX_DIM))
+    fall_back = 1;
+  
+  if(!fall_back)
+  {
+    float* a_data = a.mutable_data_ptr<float>();
+    float* b_data = b.mutable_data_ptr<float>();
+    float* out_data = out.mutable_data_ptr<float>();
+    
+    if(broadcast == 1)
     {
-      FLOAT32 * __restrict__ p_out = (FLOAT32 * __restrict__ )out.mutable_data_ptr<float>();
-      const FLOAT32 * __restrict__ p_inp1 = (const FLOAT32 * __restrict__)a.const_data_ptr<float>();
-      const FLOAT32 * __restrict__ p_inp2 = (const FLOAT32 * __restrict__)b.const_data_ptr<float>();
       
-      WORD32 p_out_shape[NNLIB_MAX_DIM];
-      WORD32 p_inp1_shape[NNLIB_MAX_DIM];
-      WORD32 p_inp2_shape[NNLIB_MAX_DIM];
+      int out_shape[NNLIB_MAX_DIM];
+      int inp1_shape[NNLIB_MAX_DIM];
+      int inp2_shape[NNLIB_MAX_DIM];
       
       for(int i = 0; i < NNLIB_MAX_DIM; i++)
       {
-        p_inp1_shape[i] = 1;
-        p_inp2_shape[i] = 1;
-        p_out_shape[i] = 1;
+        out_shape[i] = 1;
+        inp1_shape[i] = 1;
+        inp2_shape[i] = 1;
       }
         
-      int off_o = NNLIB_MAX_DIM - out.dim();        
+      int off_o = NNLIB_MAX_DIM - out.dim();
       int off_a = NNLIB_MAX_DIM - a.dim();
       int off_b = NNLIB_MAX_DIM - b.dim();
-
       for(int i = 0; i < out.dim(); i++)
-        p_out_shape[i+off_o] = out.size(i);
+        out_shape[i+off_o] = out.size(i);
       for(int i = 0; i < a.dim(); i++)
-            p_inp1_shape[i+off_a] = a.size(i);
+        inp1_shape[i+off_a] = a.size(i);
       for(int i = 0; i < b.dim(); i++)
-          p_inp2_shape[i+off_b] = b.size(i);
+        inp2_shape[i+off_b] = b.size(i);
       
-      WORD32 val = xa_nn_elm_div_broadcast_4D_f32xf32_f32(p_out,
-                                                          p_out_shape,
-                                                          p_inp1,
-                                                          p_inp1_shape,
-                                                          p_inp2,
-                                                          p_inp2_shape);
+      xa_nn_elm_div_broadcast_4D_f32xf32_f32(out_data, out_shape, a_data, inp1_shape, b_data, inp2_shape);
     }
     else
     {
-      FLOAT32 * __restrict__ p_out = (FLOAT32 * __restrict__ )out.mutable_data_ptr<float>();
-      const FLOAT32 * __restrict__ p_inp1 = (const FLOAT32 * __restrict__)a.const_data_ptr<float>();
-      const FLOAT32 * __restrict__ p_inp2 = (const FLOAT32 * __restrict__)b.const_data_ptr<float>();
-      
-      WORD32 num_elm = out.numel();
-        
-      WORD32 val = xa_nn_elm_div_f32xf32_f32(p_out,
-                                            p_inp1,
-                                            p_inp2,
-                                            num_elm);
+
+      xa_nn_elm_div_f32xf32_f32(out_data, a_data, b_data, out.numel());
     }
   }
   else
@@ -174,60 +175,59 @@ Tensor& div_out_mode(
       InvalidArgument,
       out);
       
-  if(common_type == ScalarType::Float)
-  {
+  int a_dim = a.dim(), b_dim = b.dim(), out_dim = out.dim();
+  int fall_back = 0;
+  /*find broadcast*/
+  const int a_is_broadcasted = !out.sizes().equals(a.sizes());
+  const int b_is_broadcasted = !out.sizes().equals(b.sizes());
+  const int broadcast = (a_is_broadcasted || b_is_broadcasted);
+  int max_dim = a.dim() > b.dim() ? a.dim() : b.dim();
+  max_dim = out.dim() > max_dim ? out.dim() : max_dim;
+  
+  if((a_type != ScalarType::Float) || (b_type != ScalarType::Float))
+    fall_back = 1;
+  
+  if( (a_dim == 0) || (b_dim == 0) )
+    fall_back = 1;
 
-    const bool a_is_broadcasted = !out.sizes().equals(a.sizes());
-    const bool b_is_broadcasted = !out.sizes().equals(b.sizes());
-    const bool any_is_broadcasted = (a_is_broadcasted || b_is_broadcasted);
-
-    if(any_is_broadcasted)
-    {
-      FLOAT32 * __restrict__ p_out = (FLOAT32 * __restrict__ )out.mutable_data_ptr<float>();
-      const FLOAT32 * __restrict__ p_inp1 = (const FLOAT32 * __restrict__)a.const_data_ptr<float>();
-      const FLOAT32 * __restrict__ p_inp2 = (const FLOAT32 * __restrict__)b.const_data_ptr<float>();
+  if((broadcast == 1) && (max_dim > NNLIB_MAX_DIM))
+    fall_back = 1;
       
-      WORD32 p_out_shape[NNLIB_MAX_DIM];
-      WORD32 p_inp1_shape[NNLIB_MAX_DIM];
-      WORD32 p_inp2_shape[NNLIB_MAX_DIM];
+  if(!fall_back)
+  {
+    float* a_data = a.mutable_data_ptr<float>();
+    float* b_data = b.mutable_data_ptr<float>();
+    float* out_data = out.mutable_data_ptr<float>();
+
+    if(broadcast)
+    {
+      int out_shape[NNLIB_MAX_DIM];
+      int inp1_shape[NNLIB_MAX_DIM];
+      int inp2_shape[NNLIB_MAX_DIM];
       
       for(int i = 0; i < NNLIB_MAX_DIM; i++)
       {
-        p_inp1_shape[i] = 1;
-        p_inp2_shape[i] = 1;
-        p_out_shape[i] = 1;
+        inp1_shape[i] = 1;
+        inp2_shape[i] = 1;
+        out_shape[i] = 1;
       }
-        
-      int off_o = NNLIB_MAX_DIM - out.dim();        
+
+      int off_o = NNLIB_MAX_DIM - out.dim();
       int off_a = NNLIB_MAX_DIM - a.dim();
       int off_b = NNLIB_MAX_DIM - b.dim();
 
       for(int i = 0; i < out.dim(); i++)
-        p_out_shape[i+off_o] = out.size(i);
+        out_shape[i+off_o] = out.size(i);
       for(int i = 0; i < a.dim(); i++)
-            p_inp1_shape[i+off_a] = a.size(i);
+        inp1_shape[i+off_a] = a.size(i);
       for(int i = 0; i < b.dim(); i++)
-          p_inp2_shape[i+off_b] = b.size(i);
+        inp2_shape[i+off_b] = b.size(i);
       
-      WORD32 val = xa_nn_elm_floor_div_broadcast_4D_f32xf32_f32(p_out,
-                                                          p_out_shape,
-                                                          p_inp1,
-                                                          p_inp1_shape,
-                                                          p_inp2,
-                                                          p_inp2_shape);
+      xa_nn_elm_floor_div_broadcast_4D_f32xf32_f32(out_data, out_shape, a_data, inp1_shape, b_data, inp2_shape);
     }
     else
     {
-      FLOAT32 * __restrict__ p_out = (FLOAT32 * __restrict__ )out.mutable_data_ptr<float>();
-      const FLOAT32 * __restrict__ p_inp1 = (const FLOAT32 * __restrict__)a.const_data_ptr<float>();
-      const FLOAT32 * __restrict__ p_inp2 = (const FLOAT32 * __restrict__)b.const_data_ptr<float>();
-      
-      WORD32 num_elm = out.numel();
-        
-      WORD32 val = xa_nn_elm_floor_div_f32xf32_f32(p_out,
-                                            p_inp1,
-                                            p_inp2,
-                                            num_elm);
+      xa_nn_elm_floor_div_f32xf32_f32(out_data, a_data, b_data, out.numel());
     }
   }
   else
