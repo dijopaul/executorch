@@ -7,19 +7,21 @@
 
 #if !HAVE_VFPU
     DISCARD_FUN_FOR_NONVOID_RETURN(
-             WORD32, xa_nn_elm_floor_div_f32xf32_f32,
+             WORD32, xa_nn_elm_div_mode_f32xf32_f32,
              (
                 FLOAT32 *p_out,
                 const FLOAT32 *p_inp1,
                 const FLOAT32 *p_inp2,
-                WORD32 num_elm
+                WORD32 num_elm,
+                WORD32 mode
               )
            )
 #else
-WORD32 xa_nn_elm_div_floor_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+WORD32 xa_nn_elm_div_mode_f32xf32_f32(FLOAT32 * __restrict__ p_out,
                                const FLOAT32 * __restrict__ p_inp1,
                                const FLOAT32 * __restrict__ p_inp2,
-                               WORD32 num_elm)
+                               WORD32 num_elm,
+                               WORD32 mode)
 {
     /* NULL pointer checks */
     XA_NNLIB_ARG_CHK_PTR(p_out, -1);
@@ -31,6 +33,7 @@ WORD32 xa_nn_elm_div_floor_f32xf32_f32(FLOAT32 * __restrict__ p_out,
     XA_NNLIB_ARG_CHK_ALIGN(p_inp2, sizeof(FLOAT32), -1);
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND((num_elm <= 0), -1);
+    XA_NNLIB_ARG_CHK_COND(((mode != 0) && (mode != 1)), -1);
 
     int i;
     xtfloatx2 *inp1 = (xtfloatx2 *)p_inp1;
@@ -43,6 +46,20 @@ WORD32 xa_nn_elm_div_floor_f32xf32_f32(FLOAT32 * __restrict__ p_out,
     inp2_a = XT_LASX2PP(inp2);
     out_a = AE_ZALIGN64();
     /* Each iteration of loop is independent so safe to use concurrent pragma */
+    if(mode == 0)
+    {
+#pragma concurrent /* Each iteration of loop is independent so safe to use concurrent pragma */
+      for(i=0;i < num_elm>>1;i++)
+      {
+          XT_LASX2IP(x1, inp1_a, inp1);
+          XT_LASX2IP(x2, inp2_a, inp2);
+          y = XT_DIV_SX2(x1, x2);
+          y = FITRUNC_SX2(y);
+          XT_SASX2IP(y, out_a, out);
+      }
+    }
+    else
+    {
 #pragma concurrent
     for(i=0;i < num_elm>>1;i++)
     {
@@ -51,6 +68,7 @@ WORD32 xa_nn_elm_div_floor_f32xf32_f32(FLOAT32 * __restrict__ p_out,
         y = XT_DIV_SX2(x1, x2);
         y = FIFLOOR_SX2(y);
         XT_SASX2IP(y, out_a, out);
+    }
     }
     XT_SASX2POSFP(out_a, out);
 
@@ -61,6 +79,9 @@ WORD32 xa_nn_elm_div_floor_f32xf32_f32(FLOAT32 * __restrict__ p_out,
         XT_LSIP(a1, (xtfloat *)inp1, 0);
         XT_LSIP(a2, (xtfloat *)inp2, 0);
         a = XT_DIV_S(a1, a2);
+      if(mode == 0)
+        a = FITRUNC_S(a);
+      else
         a = FIFLOOR_S(a);
         XT_SSI(a, (xtfloat *)out, 0);
     }
@@ -70,12 +91,13 @@ WORD32 xa_nn_elm_div_floor_f32xf32_f32(FLOAT32 * __restrict__ p_out,
 #endif
 
 #if HAVE_VFPU
-static void internal_elm_floor_div_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+static void internal_elm_div_mode_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
                     const    FLOAT32 * __restrict__ p_inp1,
                     const    FLOAT32 * __restrict__ p_inp2,
                              WORD32  out_lc,
                              WORD32  in_lc,
-                             xtbool  sign_flag)
+                             xtbool  sign_flag,
+                             WORD32 mode)
 {
   int i, j;
 
@@ -109,6 +131,19 @@ static void internal_elm_floor_div_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict
       p_c = (xtfloatx2 *)&p_out[i * in_lc];
       if(((((unsigned)p_a)&7) == 0) && ((((unsigned)p_b)&7) == 0) && ((((unsigned)p_c)&7) == 0))
       {
+        if(mode == 0)
+        {
+          for(j = 0; j < num_simd2_ops; j++)
+          {
+            XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
+            XT_LSX2IP(x2, p_b, 2 * sizeof(FLOAT32));
+            y = XT_DIV_SX2(x2, x1);
+            y = FITRUNC_SX2(y);
+            XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
+          }
+        }
+        else
+        {
         for(j = 0; j < num_simd2_ops; j++)
         {
           XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
@@ -118,11 +153,25 @@ static void internal_elm_floor_div_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict
           XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
         }
       }
+      }
       else
       {
         ae_valign vinp1, vinp2, out_a = AE_ZALIGN64();
         vinp1 = XT_LASX2PP(p_a);
         vinp2 = XT_LASX2PP(p_b);
+        if(mode == 0)
+        {
+          for(j = 0; j < num_simd2_ops; j++)
+          {
+            XT_LASX2IP(x1, vinp1, p_a);
+            XT_LASX2IP(x2, vinp2, p_b);
+            y = XT_DIV_SX2(x2, x1);
+            y = FITRUNC_SX2(y);
+            XT_SASX2IP(y, out_a, p_c); 
+          }
+        }
+        else
+        {
         for(j = 0; j < num_simd2_ops; j++)
         {
           XT_LASX2IP(x1, vinp1, p_a);
@@ -131,6 +180,7 @@ static void internal_elm_floor_div_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict
           y = FIFLOOR_SX2(y);
           XT_SASX2IP(y, out_a, p_c); 
         }
+        }
         XT_SASX2POSFP(out_a, (xtfloatx2 *)p_c);
       }
       if(num_scalar_ops !=0)
@@ -138,6 +188,9 @@ static void internal_elm_floor_div_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict
         XT_LSIP(a0, (xtfloat *)p_a, sizeof(FLOAT32));
         XT_LSIP(b0, (xtfloat *)p_b, sizeof(FLOAT32));
         c0 = XT_DIV_S(b0, a0);   
+        if(mode == 0)
+          c0 = FITRUNC_S(c0);
+        else
         c0 = FIFLOOR_S(c0);
         XT_SSI(c0, (xtfloat *)p_c, 0);
       }      
@@ -153,6 +206,19 @@ static void internal_elm_floor_div_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict
       p_c = (xtfloatx2 *)&p_out[i * in_lc];
       if(((((unsigned)p_a)&7) == 0) && ((((unsigned)p_b)&7) == 0) && ((((unsigned)p_c)&7) == 0))
       {
+        if(mode == 0)
+        {
+          for(j = 0; j < num_simd2_ops; j++)
+          {
+            XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
+            XT_LSX2IP(x2, p_b, 2 * sizeof(FLOAT32));
+            y = XT_DIV_SX2(x1, x2);
+            y = FITRUNC_SX2(y);
+            XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
+          }
+        }
+        else
+        {
         for(j = 0; j < num_simd2_ops; j++)
         {
           XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
@@ -162,12 +228,25 @@ static void internal_elm_floor_div_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict
           XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
         }
       }
+      }/* if(((((unsigned)p_a)&7) == 0) && ((((unsigned)p_b)&7) == 0) && ((((unsigned)p_c)&7) == 0))*/
       else
       {
         ae_valign vinp1, vinp2, out_a = AE_ZALIGN64();
         vinp1 = XT_LASX2PP(p_a);
         vinp2 = XT_LASX2PP(p_b);
-
+        if(mode == 0)
+        {
+          for(j = 0; j < num_simd2_ops; j++)
+          {
+            XT_LASX2IP(x1, vinp1, p_a);
+            XT_LASX2IP(x2, vinp2, p_b);
+            y = XT_DIV_SX2(x1, x2);
+            y = FITRUNC_SX2(y);
+            XT_SASX2IP(y, out_a, p_c); 
+          }
+        }
+        else
+        {
         for(j = 0; j < num_simd2_ops; j++)
         {
           XT_LASX2IP(x1, vinp1, p_a);
@@ -176,6 +255,7 @@ static void internal_elm_floor_div_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict
           y = FIFLOOR_SX2(y);
           XT_SASX2IP(y, out_a, p_c); 
         }
+        }
         XT_SASX2POSFP(out_a, (xtfloatx2 *)p_c);
       }
       if(num_scalar_ops !=0)
@@ -183,6 +263,9 @@ static void internal_elm_floor_div_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict
         XT_LSIP(a0, (xtfloat *)p_a, sizeof(FLOAT32));
         XT_LSIP(b0, (xtfloat *)p_b, sizeof(FLOAT32));
         c0 = XT_DIV_S(a0, b0);   
+        if(mode == 0)
+          c0 = FITRUNC_S(c0);
+        else
         c0 = FIFLOOR_S(c0);
         XT_SSI(c0, (xtfloat *)p_c, 0);
       }      
@@ -190,11 +273,12 @@ static void internal_elm_floor_div_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict
   }
 }
 
-static void internal_elm_floor_div_broadcast_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+static void internal_elm_div_mode_broadcast_f32xf32_f32(FLOAT32 * __restrict__ p_out,
                     const    FLOAT32 * __restrict__ p_inp1,
                     const    FLOAT32 * __restrict__ p_inp2,
                              WORD32  num_elm,
-                             xtbool  sign_flag)
+                             xtbool  sign_flag,
+                             WORD32 mode)
 {
   int i;
   xtfloatx2  * __restrict__ p_a = (xtfloatx2 *)p_inp1;
@@ -212,6 +296,18 @@ static void internal_elm_floor_div_broadcast_f32xf32_f32(FLOAT32 * __restrict__ 
   if(sign_flag){
     if(((((unsigned)p_a)&7) == 0) && ((((unsigned)p_c)&7) == 0))
     {
+      if(mode == 0)
+      {
+        for(i=0; i<num_simd2_ops; i++)
+        {
+          XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
+          y = XT_DIV_SX2(x2, x1);
+          y = FITRUNC_SX2(y);
+          XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
+        }
+      }
+      else
+      {
       for(i=0; i<num_simd2_ops; i++)
       {
         XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
@@ -220,17 +316,31 @@ static void internal_elm_floor_div_broadcast_f32xf32_f32(FLOAT32 * __restrict__ 
         XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
       }
     }
+    }
     else
     {
       ae_valign inp1_a, out_a;
       inp1_a = XT_LASX2PP(p_a);
       out_a = AE_ZALIGN64();      
-      for(i=0; i<num_simd2_ops; i++)
+      if(mode == 0)
       {
+      for(i=0; i<num_simd2_ops; i++)
+        {
+          XT_LASX2IP(x1, inp1_a, p_a);
+          y = XT_DIV_SX2(x2, x1);
+          y = FITRUNC_SX2(y);
+          XT_SASX2IP(y, out_a, p_c);
+        }
+      }
+      else
+      {
+        for(i=0; i<num_simd2_ops; i++)
+        {
         XT_LASX2IP(x1, inp1_a, p_a);
         y = XT_DIV_SX2(x2, x1);
         y = FIFLOOR_SX2(y);
         XT_SASX2IP(y, out_a, p_c);
+        }          
       }
       XT_SASX2POSFP(out_a, (xtfloatx2 *)p_c);   
     }  
@@ -238,6 +348,9 @@ static void internal_elm_floor_div_broadcast_f32xf32_f32(FLOAT32 * __restrict__ 
     {
       XT_LSIP(a0_7, (xtfloat *)p_a, sizeof(FLOAT32));
       out = XT_DIV_S(x2, a0_7);   
+      if(mode == 0)
+        out = FITRUNC_S(out);
+      else
       out = FIFLOOR_S(out);
       XT_SSI(out, (xtfloat *)p_c, 0);
     }
@@ -247,6 +360,18 @@ static void internal_elm_floor_div_broadcast_f32xf32_f32(FLOAT32 * __restrict__ 
   {
     if(((((unsigned)p_a)&7) == 0) && ((((unsigned)p_c)&7) == 0))
     {
+      if(mode == 0)
+      {
+        for(i=0; i<num_simd2_ops; i++)
+        {
+          XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
+          y = XT_DIV_SX2(x1, x2);
+          y = FITRUNC_SX2(y);
+          XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
+        }
+      }
+      else
+    {
       for(i=0; i<num_simd2_ops; i++)
       {
         XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
@@ -255,17 +380,31 @@ static void internal_elm_floor_div_broadcast_f32xf32_f32(FLOAT32 * __restrict__ 
         XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
       }
     }
+    } /* if(((((unsigned)p_a)&7) == 0) && ((((unsigned)p_c)&7) == 0)) */
     else
     {
       ae_valign inp1_a, out_a;
       inp1_a = XT_LASX2PP(p_a);
       out_a = AE_ZALIGN64();       
-      for(i=0; i<num_simd2_ops; i++)
+      if(mode == 0)
       {
+      for(i=0; i<num_simd2_ops; i++)
+        {
+          XT_LASX2IP(x1, inp1_a, p_a);
+          y = XT_DIV_SX2(x1, x2);
+          y = FITRUNC_SX2(y);
+          XT_SASX2IP(y, out_a, p_c);
+        }
+      }
+      else
+      {
+        for(i=0; i<num_simd2_ops; i++)
+        {
         XT_LASX2IP(x1, inp1_a, p_a);
         y = XT_DIV_SX2(x1, x2);
         y = FIFLOOR_SX2(y);
         XT_SASX2IP(y, out_a, p_c);
+        }
       }
       XT_SASX2POSFP(out_a, (xtfloatx2 *)p_c);
     }
@@ -273,6 +412,9 @@ static void internal_elm_floor_div_broadcast_f32xf32_f32(FLOAT32 * __restrict__ 
     {
       XT_LSIP(a0_7, (xtfloat *)p_a, sizeof(FLOAT32));
       out = XT_DIV_S(a0_7, x2);   
+      if(mode == 0)
+        out = FITRUNC_S(out);
+      else
       out = FIFLOOR_S(out);
       XT_SSI(out, (xtfloat *)p_c, 0);
     }    
@@ -282,23 +424,25 @@ static void internal_elm_floor_div_broadcast_f32xf32_f32(FLOAT32 * __restrict__ 
 
 #if !HAVE_VFPU
 DISCARD_FUN_FOR_NONVOID_RETURN(
-             WORD32, xa_nn_elm_floor_div_broadcast_4D_f32xf32_f32,
+             WORD32, xa_nn_elm_div_mode_broadcast_4D_f32xf32_f32,
              (
                       FLOAT32 * p_out,
                       const WORD32 *const p_out_shape,
                       const FLOAT32 * p_inp1,
                       const WORD32 *const p_inp1_shape,
                       const FLOAT32 * p_inp2,
-                      const WORD32 *const p_inp2_shape
+                      const WORD32 *const p_inp2_shape,
+                      WORD32 mode
               )
            )
 #else           
-WORD32 xa_nn_elm_div_floor_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+WORD32 xa_nn_elm_div_mode_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
                       const WORD32 *const p_out_shape,
                       const FLOAT32 * __restrict__ p_inp1,
                       const WORD32 *const p_inp1_shape,
                       const FLOAT32 * __restrict__ p_inp2,
-                      const WORD32 *const p_inp2_shape)
+                      const WORD32 *const p_inp2_shape,
+                      WORD32 mode)
 {
   /* NULL pointer checks */
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
@@ -326,6 +470,7 @@ WORD32 xa_nn_elm_div_floor_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out
       return -1;
     }
   }
+  XA_NNLIB_ARG_CHK_COND(((mode != 0) && (mode != 1)), -1);
 
   WORD32 inp1_strides[4], inp2_strides[4];
   inp1_strides[3] = 1;
@@ -366,13 +511,14 @@ WORD32 xa_nn_elm_div_floor_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out
   if(need_broadcast == 0)
   {
     sign_flag = 0;
-    internal_elm_floor_div_broadcast_2D_f32xf32_f32(
+    internal_elm_div_mode_broadcast_2D_f32xf32_f32(
                 p_out,
                 p_inp1,
                 p_inp2,
                 1,
                 p_out_shape[0] * inp1_strides[0],
-                sign_flag);
+                sign_flag,
+                mode);
   }
   else if(inp1_strides[3] == inp2_strides[3])
   {
@@ -409,13 +555,14 @@ WORD32 xa_nn_elm_div_floor_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out
       const FLOAT32 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
       for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
       {
-        internal_elm_floor_div_broadcast_2D_f32xf32_f32(
+        internal_elm_div_mode_broadcast_2D_f32xf32_f32(
             p_out_tmp,
             p_inp1_tmp0,
             p_inp2_tmp0,
             out_lc,
             in_lc,
-            sign_flag);
+            sign_flag,
+            mode);
         p_out_tmp += in_lc * out_lc;
         p_inp1_tmp0 += inp1_strides[1];
         p_inp2_tmp0 += inp2_strides[1];
@@ -433,12 +580,13 @@ WORD32 xa_nn_elm_div_floor_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out
       const FLOAT32 *tmp;
       tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
     }
-    internal_elm_floor_div_broadcast_f32xf32_f32(
+    internal_elm_div_mode_broadcast_f32xf32_f32(
         p_out_tmp,
         p_inp1_tmp,
         p_inp2_tmp,
         p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3],
-        sign_flag);
+        sign_flag,
+        mode);
   }
   else
   {
@@ -472,12 +620,13 @@ WORD32 xa_nn_elm_div_floor_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out
         for(itr2 = 0; itr2 < p_out_shape[2]; itr2++)
         {
           {
-            internal_elm_floor_div_broadcast_f32xf32_f32(
+            internal_elm_div_mode_broadcast_f32xf32_f32(
                 p_out_tmp,
                 p_inp1_tmp1,
                 p_inp2_tmp1,
                 p_out_shape[3], 
-                sign_flag);
+                sign_flag,
+                mode);
           }
           p_out_tmp += p_out_shape[3];
           p_inp1_tmp1 += inp1_strides[2];

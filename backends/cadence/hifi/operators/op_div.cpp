@@ -192,6 +192,13 @@ Tensor& div_out_mode(
 
   if((broadcast == 1) && (max_dim > NNLIB_MAX_DIM))
     fall_back = 1;
+  int mode_val = -1;
+  if (mode.has_value() && mode.value() == "trunc") 
+    mode_val = 0;
+  else if (mode.has_value() && mode.value() == "floor")
+    mode_val = 1;
+  else
+    fall_back = 1;
       
   if(!fall_back)
   {
@@ -223,11 +230,11 @@ Tensor& div_out_mode(
       for(int i = 0; i < b.dim(); i++)
         inp2_shape[i+off_b] = b.size(i);
       
-      xa_nn_elm_div_floor_broadcast_4D_f32xf32_f32(out_data, out_shape, a_data, inp1_shape, b_data, inp2_shape);
+      xa_nn_elm_div_mode_broadcast_4D_f32xf32_f32(out_data, out_shape, a_data, inp1_shape, b_data, inp2_shape, mode_val);
     }
     else
     {
-      xa_nn_elm_div_floor_f32xf32_f32(out_data, a_data, b_data, out.numel());
+      xa_nn_elm_div_mode_f32xf32_f32(out_data, a_data, b_data, out.numel(), mode_val);
     }
   }
   else
