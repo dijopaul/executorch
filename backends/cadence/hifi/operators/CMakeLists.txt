@@ -40,7 +40,6 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bmm.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_cat.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_clone.cpp"
-    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_div.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_mul.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_permute_copy.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sigmoid.cpp"
