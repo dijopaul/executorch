@@ -36,7 +36,11 @@ Tensor& sigmoid_out(RuntimeContext& ctx, const Tensor& in, Tensor& out) {
   ScalarType in_type = in.scalar_type();
   ScalarType out_type = out.scalar_type();
   
-  if(in_type == ScalarType::Float)
+  int fall_back = 0;
+  if((in_type != ScalarType::Float) || (out_type != ScalarType::Float))
+      fall_back = 1;
+  
+  if(!fall_back)
   {
     float* data_in = in.mutable_data_ptr<float>();
     float* data_out = out.mutable_data_ptr<float>();
