@@ -46,7 +46,12 @@ Tensor& softmax_out(
   const size_t stride = in.strides()[d];
   const size_t outer_size = getLeadingDims(in, d);
   const size_t outer_stride = size * stride;
-  if(in.scalar_type() == ScalarType::Float) 
+  
+  int fall_back = 0;
+  if(out.scalar_type() != ScalarType::Float)
+      fall_back = 1;
+  
+  if(!fall_back)
   {
     const float* const in_dataf = in.const_data_ptr<float>();
     float* const out_dataf = out.mutable_data_ptr<float>();
