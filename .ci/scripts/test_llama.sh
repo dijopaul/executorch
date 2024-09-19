@@ -9,10 +9,11 @@ set -exu
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
-MODEL_NAME=$1 # stories110M.pt
+MODEL_NAME=$1 # stories110M
 BUILD_TOOL=$2 # buck2 or cmake
-DTYPE=$3 # fp16 or fp32
+DTYPE=$3 # fp16, bf16, or fp32
 MODE=${4:-"xnnpack+custom"} # portable or xnnpack+custom or xnnpack+custom+qe
+UPLOAD_DIR=${5:-}
 if [[ $# -lt 4 ]]; then # Assuming 4 mandatory args
     echo "Expecting atleast 4 positional arguments"
     echo "Usage: [...]"
@@ -28,7 +29,7 @@ if [[ -z "${BUILD_TOOL:-}" ]]; then
 fi
 
 if [[ -z "${DTYPE:-}" ]]; then
-  echo "Missing dtype, choose fp16 or fp32, exiting..."
+  echo "Missing dtype, choose fp16, bf16, or fp32, exiting..."
   exit 1
 fi
 
@@ -71,6 +72,25 @@ fi
 
 echo "COREML option ${COREML}"
 
+if [[ "${MODE}" =~ .*qnn.* ]]; then
+  QNN=ON
+  export EXECUTORCH_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+  export QNN_SDK_ROOT=/tmp/qnn/2.25.0.240728
+  export LD_LIBRARY_PATH="${QNN_SDK_ROOT}/lib/x86_64-linux-clang"
+  export PYTHONPATH=".."
+  cp schema/program.fbs exir/_serialize/program.fbs
+  cp schema/scalar_type.fbs exir/_serialize/scalar_type.fbs
+  cp -f build-x86/backends/qualcomm/PyQnnManagerAdaptor.cpython-310-x86_64-linux-gnu.so backends/qualcomm/python
+  cp -f build-x86/backends/qualcomm/PyQnnWrapperAdaptor.cpython-310-x86_64-linux-gnu.so backends/qualcomm/python
+
+else
+  QNN=OFF
+  QNN_SDK_ROOT=""
+fi
+
+echo "QNN option ${QNN}"
+echo "QNN_SDK_ROOT: ${QNN_SDK_ROOT}"
+
 if [[ -z "${BUCK:-}" ]]; then
   BUCK=buck2
 fi
@@ -87,14 +107,17 @@ cmake_install_executorch_libraries() {
     retry cmake \
         -DCMAKE_INSTALL_PREFIX=cmake-out \
         -DCMAKE_BUILD_TYPE=Debug \
-        -DEXECUTORCH_BUILD_EXTENSION_MODULE=ON \
         -DEXECUTORCH_BUILD_EXTENSION_DATA_LOADER=ON \
+        -DEXECUTORCH_BUILD_EXTENSION_MODULE=ON \
+        -DEXECUTORCH_BUILD_EXTENSION_TENSOR=ON \
         -DEXECUTORCH_BUILD_KERNELS_CUSTOM="$CUSTOM" \
         -DEXECUTORCH_BUILD_KERNELS_OPTIMIZED=ON \
         -DEXECUTORCH_BUILD_KERNELS_QUANTIZED=ON \
         -DEXECUTORCH_BUILD_XNNPACK="$XNNPACK" \
         -DEXECUTORCH_BUILD_MPS="$MPS" \
         -DEXECUTORCH_BUILD_COREML="$COREML" \
+        -DEXECUTORCH_BUILD_QNN="$QNN" \
+        -DQNN_SDK_ROOT="$QNN_SDK_ROOT" \
         -DPYTHON_EXECUTABLE="$PYTHON_EXECUTABLE" \
         -Bcmake-out .
     cmake --build cmake-out -j9 --target install --config Debug
@@ -118,7 +141,7 @@ cmake_build_llama_runner() {
 
 cleanup_files() {
   echo "Deleting downloaded and generated files"
-  rm "${MODEL_NAME}"
+  rm "${CHECKPOINT_FILE_NAME}"
   rm tokenizer.model
   rm tokenizer.bin
   rm "${EXPORTED_MODEL_NAME}"
@@ -126,10 +149,21 @@ cleanup_files() {
   rm params.json
 }
 
+prepare_artifacts_upload() {
+  if [ -n "$UPLOAD_DIR" ]; then
+    echo "Preparing for uploading generated artifacs"
+    zip -j model.zip "${EXPORTED_MODEL_NAME}" tokenizer.bin
+    mkdir -p "${UPLOAD_DIR}"
+    mv model.zip "${UPLOAD_DIR}"
+  fi
+}
+
 # Download and create artifacts.
 PARAMS="params.json"
+CHECKPOINT_FILE_NAME=""
 touch "${PARAMS}"
-if [[ "${MODEL_NAME}" == "stories110M.pt" ]]; then
+if [[ "${MODEL_NAME}" == "stories110M" ]]; then
+  CHECKPOINT_FILE_NAME="stories110M.pt"
   download_stories_model_artifacts
 else
   echo "Unsupported model name ${MODEL_NAME}"
@@ -140,6 +174,8 @@ fi
 EXPORTED_MODEL_NAME="llama2"
 if [[ "${DTYPE}" == "fp16" ]]; then
   EXPORTED_MODEL_NAME="${EXPORTED_MODEL_NAME}_h"
+elif [[ "${DTYPE}" == "bf16" ]]; then
+  EXPORTED_MODEL_NAME="${EXPORTED_MODEL_NAME}_bf"
 elif [[ "${DTYPE}" == "fp32" ]]; then
   :
 else
@@ -150,7 +186,7 @@ fi
 # Export model.
 EXPORTED_MODEL_NAME="${EXPORTED_MODEL_NAME}.pte"
 echo "Exporting ${EXPORTED_MODEL_NAME}"
-EXPORT_ARGS="-c stories110M.pt -p ${PARAMS} -d ${DTYPE} -n ${EXPORTED_MODEL_NAME} -kv"
+EXPORT_ARGS="-c ${CHECKPOINT_FILE_NAME} -p ${PARAMS} -d ${DTYPE} -n ${EXPORTED_MODEL_NAME} -kv"
 if [[ "${XNNPACK}" == "ON" ]]; then
   EXPORT_ARGS="${EXPORT_ARGS} -X -qmode 8da4w -G 128"
 fi
@@ -165,6 +201,9 @@ if [[ "${MPS}" == "ON" ]]; then
 fi
 if [[ "${COREML}" == "ON" ]]; then
   EXPORT_ARGS="${EXPORT_ARGS} -kv -v --coreml --disable_dynamic_shape"
+fi
+if [[ "${QNN}" == "ON" ]]; then
+  EXPORT_ARGS="${EXPORT_ARGS} -kv -v --qnn --disable_dynamic_shape"
 fi
 # Add dynamically linked library location
 $PYTHON_EXECUTABLE -m examples.models.llama2.export_llama ${EXPORT_ARGS}
@@ -205,6 +244,7 @@ if [[ "${RESULT}" == "${EXPECTED_PREFIX}"* ]]; then
   echo "Actual result: ${RESULT}"
   echo "Success"
 
+  prepare_artifacts_upload
   cleanup_files
 else
   echo "Expected result prefix: ${EXPECTED_PREFIX}"

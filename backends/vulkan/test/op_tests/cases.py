@@ -49,6 +49,7 @@ def get_binary_elementwise_inputs():
             ((S, S1, S2), (S, S1, S2)),
             ((S, S1, S2), (S, S1, 1), 2.0),
             ((S, S1, S2), (S, 1, S2), 2.0),
+            ((XS, S, S1, S2), (XS, S, 1, 1), 2.0),
         ]
     )
     test_suite.layouts = [
@@ -70,6 +71,7 @@ def get_mm_inputs():
     test_suite.prepacked_args = ["mat2"]
     # ATen matmul doesn't support half
     test_suite.dtypes = ["at::kFloat"]
+    test_suite.storage_types = ["utils::kTexture3D", "utils::kBuffer"]
     test_suite.layouts = [
         "utils::kWidthPacked",
         "utils::kChannelsPacked",
@@ -877,6 +879,7 @@ def get_softmax_inputs():
         "aten.neg.default",
         "aten.cos.default",
         "aten.hardswish.default",
+        "aten.hardsigmoid.default",
     ]
 )
 def get_unary_ops_inputs():

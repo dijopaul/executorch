@@ -6,18 +6,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <executorch/backends/cadence/reference/kernels/kernels.h>
 #include <executorch/runtime/kernel/kernel_includes.h>
-#include "kernels.h"
 
 namespace impl {
 namespace reference {
 namespace native {
 
 using Tensor = exec_aten::Tensor;
-using RuntimeContext = torch::executor::RuntimeContext;
+using executorch::runtime::KernelRuntimeContext;
 
 void quantized_linear_out(
-    RuntimeContext& ctx,
+    KernelRuntimeContext& ctx,
     const Tensor& src,
     const Tensor& weight,
     const Tensor& bias,

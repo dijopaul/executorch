@@ -20,7 +20,7 @@
 // This cpp file will provide weak implementations of the symbols declared in
 // Platform.h. Client users can strongly define any or all of the functions to
 // override them.
-#define ET_INTERNAL_PLATFORM_WEAKNESS __ET_WEAK
+#define ET_INTERNAL_PLATFORM_WEAKNESS ET_WEAK
 #include <executorch/runtime/platform/platform.h>
 
 #include <chrono>
@@ -55,7 +55,7 @@
       fprintf(                                                      \
           ET_LOG_OUTPUT_FILE,                                       \
           "ExecuTorch PAL must be initialized before call to %s()", \
-          __ET_FUNCTION);                                           \
+          ET_FUNCTION);                                             \
       fflush(ET_LOG_OUTPUT_FILE);                                   \
       et_pal_abort();                                               \
     }                                                               \
@@ -88,7 +88,7 @@ void et_pal_init(void) {
  * Immediately abort execution, setting the device into an error state, if
  * available.
  */
-__ET_NORETURN void et_pal_abort(void) {
+ET_NORETURN void et_pal_abort(void) {
   std::abort();
 }
 
@@ -134,10 +134,10 @@ void et_pal_emit_log_message(
     et_timestamp_t timestamp,
     et_pal_log_level_t level,
     const char* filename,
-    __ET_UNUSED const char* function,
+    ET_UNUSED const char* function,
     size_t line,
     const char* message,
-    __ET_UNUSED size_t length) {
+    ET_UNUSED size_t length) {
   _ASSERT_PAL_INITIALIZED();
 
   // Not all platforms have ticks == nanoseconds, but this one does.
@@ -169,4 +169,27 @@ void et_pal_emit_log_message(
       line,
       message);
   fflush(ET_LOG_OUTPUT_FILE);
+}
+
+/**
+ * NOTE: Core runtime code must not call this directly. It may only be called by
+ * a MemoryAllocator wrapper.
+ *
+ * Allocates size bytes of memory via malloc.
+ *
+ * @param[in] size Number of bytes to allocate.
+ * @returns the allocated memory, or nullptr on failure. Must be freed using
+ *     et_pal_free().
+ */
+void* et_pal_allocate(size_t size) {
+  return malloc(size);
+}
+
+/**
+ * Frees memory allocated by et_pal_allocate().
+ *
+ * @param[in] ptr Pointer to memory to free. May be nullptr.
+ */
+void et_pal_free(void* ptr) {
+  free(ptr);
 }

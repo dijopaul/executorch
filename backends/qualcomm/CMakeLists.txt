@@ -58,6 +58,7 @@ add_compile_options("-Wall" "-Werror" "-Wno-sign-compare")
 # which can be ignored by GNU. So we make it a warning, not an error in GNU.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   add_compile_options("-Wno-error=attributes")
+  add_link_options("-flto=auto")
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -65,10 +66,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_link_options("-s")
 
   # --gc-sections is added by torch.
-  add_compile_options(
-    "-O3" "-ffunction-sections" "-fdata-sections" "-frtti"
-    "-Wno-unused-command-line-argument"
-  )
+  add_compile_options("-O3" "-ffunction-sections" "-fdata-sections" "-frtti")
 endif()
 
 include_directories(
@@ -183,7 +181,10 @@ target_link_libraries(
 )
 target_link_libraries(
   qnn_executorch_backend PRIVATE qnn_executorch_header qnn_schema qnn_manager
-                                 executorch_no_prim_ops qcir_utils
+                                 executorch_no_prim_ops qcir_utils extension_tensor
+)
+set_target_properties(
+  qnn_executorch_backend PROPERTIES LINK_FLAGS "-Wl,-rpath='$ORIGIN'"
 )
 target_link_libraries(utils PRIVATE qnn_executorch_logging)
 target_link_libraries(
@@ -245,6 +246,7 @@ if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
             qnn_executorch_header
             executorch
             qcir_utils
+            extension_tensor
   )
   target_link_libraries(
     PyQnnWrapperAdaptor PRIVATE pybind11::module pybind11::lto wrappers
@@ -257,6 +259,19 @@ if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
     # Strip unnecessary sections of the binary
     pybind11_strip(PyQnnManagerAdaptor)
     pybind11_strip(PyQnnWrapperAdaptor)
+  endif()
+
+  if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    # need to allow exceptions in pybind
+    set(_pybind_compile_options -Wno-deprecated-declarations -fPIC -frtti
+                                -fexceptions
+    )
+    target_compile_options(
+      PyQnnManagerAdaptor PUBLIC ${_pybind_compile_options}
+    )
+    target_compile_options(
+      PyQnnWrapperAdaptor PUBLIC ${_pybind_compile_options}
+    )
   endif()
 
   add_subdirectory(

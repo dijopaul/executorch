@@ -27,7 +27,12 @@ from executorch.backends.qualcomm.serialization.qnn_compile_spec_schema import (
     QcomChipset,
 )
 from executorch.backends.qualcomm.utils.utils import capture_program
-from executorch.examples.qualcomm.scripts.utils import SimpleADB
+from executorch.devtools import generate_etrecord, Inspector
+from executorch.examples.qualcomm.utils import (
+    generate_inputs,
+    make_output_dir,
+    SimpleADB,
+)
 
 from executorch.exir.backend.backend_api import to_backend
 from executorch.exir.backend.compile_spec_schema import CompileSpec
@@ -35,9 +40,7 @@ from executorch.exir.dialects._ops import ops as exir_ops
 from executorch.exir.lowered_backend_module import LoweredBackendModule
 from executorch.exir.pass_base import ExportPass
 from executorch.exir.passes.memory_planning_pass import MemoryPlanningPass
-from executorch.exir.program._program import ExecutorchProgram
-from executorch.sdk import generate_etrecord
-from executorch.sdk.inspector import Inspector
+from executorch.exir.program import ExecutorchProgram, ExecutorchProgramManager
 from torch.ao.quantization.quantize_pt2e import convert_pt2e, prepare_pt2e
 
 
@@ -133,6 +136,7 @@ class TestQNN(unittest.TestCase):
     use_16a16w: str = "16a16w"
     use_16a4w: str = "16a4w"
     shared_buffer: bool = False
+    enable_x86_64: bool = False
 
     def _assert_outputs_equal(self, model_output, ref_output):
         self.assertTrue(len(ref_output) == len(model_output))
@@ -176,18 +180,21 @@ class TestQNN(unittest.TestCase):
 
         return input_list, ref_outputs, pte_fname
 
-    def verify_output(
+    def verify_output(  # noqa: C901
         self,
         module: torch.nn.Module,
         sample_inputs: Tuple[torch.Tensor],
         executorch_prog: ExecutorchProgram | LoweredBackendModule,
         etrecord_path: str = "etrecord.bin",
         expected_profile_events: int = -1,
+        expected_intermediate_events: int = -1,
     ):
         with tempfile.TemporaryDirectory() as tmp_dir:
             buffer = (
                 executorch_prog.buffer
-                if isinstance(executorch_prog, ExecutorchProgram)
+                if isinstance(
+                    executorch_prog, (ExecutorchProgram, ExecutorchProgramManager)
+                )
                 else executorch_prog.buffer()
             )
             (
@@ -201,16 +208,17 @@ class TestQNN(unittest.TestCase):
                 tmp_dir,
             )
 
-            device_output_dir = f"{tmp_dir}/outputs"
-            device_outputs = []
+            output_dir = f"{tmp_dir}/outputs"
+            outputs = []
             etdump_path = f"{tmp_dir}/etdump.etdp"
+            debug_output_path = f"{tmp_dir}/debug_output.bin"
 
             def post_process():
-                for i, f in enumerate(sorted(os.listdir(device_output_dir))):
-                    filename = os.path.join(device_output_dir, f)
+                for i, f in enumerate(sorted(os.listdir(output_dir))):
+                    filename = os.path.join(output_dir, f)
                     output = np.fromfile(filename, dtype=ref_outputs[i].numpy().dtype)
                     output = torch.from_numpy(output).reshape(ref_outputs[i].shape)
-                    device_outputs.append(output)
+                    outputs.append(output)
 
             def validate_profile():
                 inspector = Inspector(etdump_path=etdump_path, etrecord=etrecord_path)
@@ -218,23 +226,99 @@ class TestQNN(unittest.TestCase):
                     len(inspector.to_dataframe().index) == expected_profile_events
                 )
 
-            adb = SimpleADB(
-                qnn_sdk=os.getenv("QNN_SDK_ROOT"),
-                build_path=self.build_folder,
-                pte_path=pte_fname,
-                workspace="/data/local/tmp/qnn_executorch_test",
-                device_id=self.device,
-                host_id=self.host,
-                soc_model=self.model,
-                error_only=self.error_only,
-            )
-            adb.push(inputs=[sample_inputs], input_list=input_list)
-            adb.execute()
-            adb.pull(output_path=tmp_dir, callback=post_process)
-            self._assert_outputs_equal(device_outputs, ref_outputs)
+            def validate_intermediate_tensor():
+                inspector = Inspector(
+                    etdump_path=etdump_path, debug_buffer_path=debug_output_path
+                )
+                for event_block in inspector.event_blocks:
+                    if event_block.name == "Execute":
+                        self.assertTrue(
+                            len(event_block.events) == expected_intermediate_events
+                        )
 
-            if expected_profile_events != -1:
-                adb.pull_etdump(etdump_path, callback=validate_profile)
+            if self.enable_x86_64:
+                generate_inputs(tmp_dir, "input_list.txt", [sample_inputs], input_list)
+                make_output_dir(output_dir)
+
+                target = "x86_64-linux-clang"
+                qnn_sdk = os.environ.get("QNN_SDK_ROOT", None)
+                assert qnn_sdk, "QNN_SDK_ROOT was not found in environment variable"
+
+                build_folder = self.build_folder
+                if os.path.isabs(self.build_folder):
+                    # obey user's opinion
+                    pass
+                else:
+                    # ok, assuming the user give a relative path to cwd
+                    build_folder = os.path.join(os.getcwd(), self.build_folder)
+
+                cmd = [
+                    # qnn_executor_runner
+                    f"{build_folder}/examples/qualcomm/executor_runner/qnn_executor_runner",
+                    "--model_path",
+                    f"{pte_fname}",
+                    "--input_list_path",
+                    f"{tmp_dir}/input_list.txt",
+                    "--output_folder_path",
+                    f"{output_dir}",
+                ]
+
+                env = dict(os.environ)
+                env["LD_LIBRARY_PATH"] = f"{qnn_sdk}/lib/{target}/:{build_folder}/lib"
+                proc = subprocess.run(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    env=env,
+                    cwd=tmp_dir,
+                )
+
+                self.assertEqual(
+                    proc.returncode,
+                    0,
+                    f"The process running qnn_executorch_runner return {proc.returncode}, "
+                    "STDOUT=\n"
+                    f"{proc.stdout.decode('utf-8')}",
+                )
+
+                # Verify the outputs
+                post_process()
+                self._assert_outputs_equal(outputs, ref_outputs)
+
+                # Verify the etdump
+                if expected_profile_events != -1:
+                    validate_profile()
+
+                if expected_intermediate_events != -1:
+                    validate_intermediate_tensor()
+            else:
+                adb = SimpleADB(
+                    qnn_sdk=os.getenv("QNN_SDK_ROOT"),
+                    build_path=self.build_folder,
+                    pte_path=pte_fname,
+                    workspace="/data/local/tmp/qnn_executorch_test",
+                    device_id=self.device,
+                    host_id=self.host,
+                    soc_model=self.model,
+                    error_only=self.error_only,
+                    dump_intermediate_outputs=(
+                        True if expected_intermediate_events != -1 else False
+                    ),
+                )
+                adb.push(inputs=[sample_inputs], input_list=input_list)
+                adb.execute()
+                adb.pull(output_path=tmp_dir, callback=post_process)
+                self._assert_outputs_equal(outputs, ref_outputs)
+
+                if expected_profile_events != -1:
+                    adb.pull_etdump(etdump_path, callback=validate_profile)
+
+                if expected_intermediate_events != -1:
+                    adb.pull_debug_output(
+                        etdump_path,
+                        debug_output_path,
+                        callback=validate_intermediate_tensor,
+                    )
 
     def lower_module_and_test_output(
         self,
@@ -242,6 +326,7 @@ class TestQNN(unittest.TestCase):
         sample_inputs: Tuple[torch.Tensor],
         expected_partitions: int = 1,
         expected_profile_events: int = -1,
+        expected_intermediate_events: int = -1,
         assert_output_equal: bool = True,
         skip_node_id_set: set = None,
         skip_node_op_set: set = None,
@@ -265,7 +350,6 @@ class TestQNN(unittest.TestCase):
                 # Therefore, won't want to pre-allocate
                 # by memory manager in runtime.
                 memory_planning_pass=MemoryPlanningPass(
-                    memory_planning_algo="greedy",
                     alloc_graph_input=not self.shared_buffer,
                     alloc_graph_output=not self.shared_buffer,
                 ),
@@ -286,11 +370,19 @@ class TestQNN(unittest.TestCase):
         etrecord_path = "etrecord.bin"
         if self.enable_profile:
             generate_etrecord(etrecord_path, edge_copy, exec_prog)
-
         # Check numerics
-        if assert_output_equal or expected_profile_events != -1:
+        if (
+            assert_output_equal
+            or expected_profile_events != -1
+            or expected_intermediate_events != -1
+        ):
             self.verify_output(
-                module, sample_inputs, exec_prog, etrecord_path, expected_profile_events
+                module,
+                sample_inputs,
+                exec_prog,
+                etrecord_path,
+                expected_profile_events,
+                expected_intermediate_events,
             )
 
     def get_qdq_module(
@@ -362,6 +454,8 @@ class TestQNN(unittest.TestCase):
                             (node,),
                         )
                         inserted_node.meta["val"] = node.meta["val"]
+                        if "quant_attrs" in node.meta:
+                            inserted_node.meta["quant_attrs"] = node.meta["quant_attrs"]
                         for user in users:
                             user.replace_input_with(node, inserted_node)
 

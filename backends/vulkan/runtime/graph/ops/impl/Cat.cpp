@@ -40,10 +40,10 @@ void add_cat_default_node(
 
     for (ValueRef input_ref : *input_list) {
       vTensorPtr t_in = graph.get_tensor(input_ref);
-      utils::ivec3 range = t_in->texture_limits();
+      utils::ivec3 range = t_in->logical_limits();
       add_copy_offset_node(
           graph, input_ref, range, src_offset, dst_offset, out);
-      dst_offset.data[0] += range.data[0];
+      dst_offset[0] += range[0];
     }
 
   } else if (dim_index == kHeight4D) {
@@ -52,10 +52,10 @@ void add_cat_default_node(
 
     for (ValueRef input_ref : *input_list) {
       vTensorPtr t_in = graph.get_tensor(input_ref);
-      utils::ivec3 range = t_in->texture_limits();
+      utils::ivec3 range = t_in->logical_limits();
       add_copy_offset_node(
           graph, input_ref, range, src_offset, dst_offset, out);
-      dst_offset.data[1] += range.data[1];
+      dst_offset[1] += range[1];
     }
   } else if (dim_index == kBatch4D) {
     utils::ivec3 src_offset = utils::make_ivec3({0, 0, 0}, false);
@@ -63,10 +63,10 @@ void add_cat_default_node(
 
     for (ValueRef input_ref : *input_list) {
       vTensorPtr t_in = graph.get_tensor(input_ref);
-      utils::ivec3 range = t_in->texture_limits();
+      utils::ivec3 range = t_in->logical_limits();
       add_copy_offset_node(
           graph, input_ref, range, src_offset, dst_offset, out);
-      dst_offset.data[2] += range.data[2];
+      dst_offset[2] += range[2];
     }
   } else if (dim_index == kChannel4D) {
     int32_t src_offset = 0;

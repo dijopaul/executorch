@@ -6,15 +6,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <executorch/backends/cadence/reference/kernels/kernels.h>
 #include <executorch/runtime/kernel/kernel_includes.h>
-#include "kernels.h"
 
 namespace impl {
 namespace reference {
 namespace native {
 
 using Tensor = exec_aten::Tensor;
-using RuntimeContext = torch::executor::RuntimeContext;
+using executorch::runtime::KernelRuntimeContext;
 
 // The quantized matmul. The quantized matmul accumulates in a wider register,
 // whose type is TA.
@@ -105,11 +105,10 @@ void inline _typed_quantized_matmul(
           out_dim);
     }
   }
-  break;
 }
 
 void quantized_matmul_out(
-    RuntimeContext& ctx,
+    KernelRuntimeContext& ctx,
     const Tensor& X,
     int64_t X_zero_point,
     const Tensor& Y,
@@ -120,7 +119,7 @@ void quantized_matmul_out(
     int64_t out_zero_point,
     bool transposed,
     Tensor& out) {
-  if (out.scalar_type() == at::ScalarType::Byte) {
+  if (out.scalar_type() == exec_aten::ScalarType::Byte) {
     _typed_quantized_matmul<uint8_t>(
         X,
         X_zero_point,
@@ -132,7 +131,7 @@ void quantized_matmul_out(
         out_zero_point,
         transposed,
         out);
-  } else if (out.scalar_type() == at::ScalarType::Char) {
+  } else if (out.scalar_type() == exec_aten::ScalarType::Char) {
     _typed_quantized_matmul<int8_t>(
         X,
         X_zero_point,

@@ -20,6 +20,7 @@ VulkanBuffer::VulkanBuffer()
       allocator_(VK_NULL_HANDLE),
       memory_{},
       owns_memory_(false),
+      is_copy_(false),
       handle_(VK_NULL_HANDLE) {}
 
 VulkanBuffer::VulkanBuffer(
@@ -37,6 +38,7 @@ VulkanBuffer::VulkanBuffer(
       allocator_(vma_allocator),
       memory_{},
       owns_memory_(allocate_memory),
+      is_copy_(false),
       handle_(VK_NULL_HANDLE) {
   // If the buffer size is 0, allocate a buffer with a size of 1 byte. This is
   // to ensure that there will be some resource that can be bound to a shader.
@@ -56,8 +58,6 @@ VulkanBuffer::VulkanBuffer(
       nullptr, // pQueueFamilyIndices
   };
 
-  memory_.create_info = allocation_create_info;
-
   if (allocate_memory) {
     VK_CHECK(vmaCreateBuffer(
         allocator_,
@@ -74,11 +74,29 @@ VulkanBuffer::VulkanBuffer(
   }
 }
 
+VulkanBuffer::VulkanBuffer(
+    const VulkanBuffer& other,
+    const VkDeviceSize offset,
+    const VkDeviceSize range) noexcept
+    : buffer_properties_(other.buffer_properties_),
+      allocator_(other.allocator_),
+      memory_(other.memory_),
+      owns_memory_(false),
+      is_copy_(true),
+      handle_(other.handle_) {
+  // TODO: set the offset and range appropriately
+  buffer_properties_.mem_offset = other.buffer_properties_.mem_offset + offset;
+  if (range != VK_WHOLE_SIZE) {
+    buffer_properties_.mem_range = range;
+  }
+}
+
 VulkanBuffer::VulkanBuffer(VulkanBuffer&& other) noexcept
     : buffer_properties_(other.buffer_properties_),
       allocator_(other.allocator_),
       memory_(std::move(other.memory_)),
       owns_memory_(other.owns_memory_),
+      is_copy_(other.is_copy_),
       handle_(other.handle_) {
   other.handle_ = VK_NULL_HANDLE;
 }
@@ -91,6 +109,7 @@ VulkanBuffer& VulkanBuffer::operator=(VulkanBuffer&& other) noexcept {
   allocator_ = other.allocator_;
   memory_ = std::move(other.memory_);
   owns_memory_ = other.owns_memory_;
+  is_copy_ = other.is_copy_;
   handle_ = other.handle_;
 
   other.handle_ = tmp_buffer;
@@ -100,7 +119,10 @@ VulkanBuffer& VulkanBuffer::operator=(VulkanBuffer&& other) noexcept {
 }
 
 VulkanBuffer::~VulkanBuffer() {
-  if (VK_NULL_HANDLE != handle_) {
+  // Do not destroy the VkBuffer if this class instance is a copy of another
+  // class instance, since this means that this class instance does not have
+  // ownership of the underlying resource.
+  if (VK_NULL_HANDLE != handle_ && !is_copy_) {
     if (owns_memory_) {
       vmaDestroyBuffer(allocator_, handle_, memory_.allocation);
     } else {
@@ -111,6 +133,12 @@ VulkanBuffer::~VulkanBuffer() {
     // memory
     memory_.allocation = VK_NULL_HANDLE;
   }
+}
+
+VmaAllocationInfo VulkanBuffer::allocation_info() const {
+  VmaAllocationInfo info;
+  vmaGetAllocationInfo(allocator_, memory_.allocation, &info);
+  return info;
 }
 
 VkMemoryRequirements VulkanBuffer::get_memory_requirements() const {

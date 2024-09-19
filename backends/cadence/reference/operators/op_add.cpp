@@ -8,7 +8,6 @@
 
 #include <executorch/kernels/portable/cpu/scalar_utils.h>
 #include <executorch/kernels/portable/cpu/util/broadcast_util.h>
-#include <executorch/kernels/portable/cpu/util/functional_util.h>
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include <executorch/runtime/platform/assert.h>
 
@@ -17,7 +16,7 @@ namespace executor {
 namespace native {
 
 Tensor& add_out(
-    RuntimeContext& ctx,
+    KernelRuntimeContext& ctx,
     const Tensor& a,
     const Tensor& b,
     const Scalar& alpha,

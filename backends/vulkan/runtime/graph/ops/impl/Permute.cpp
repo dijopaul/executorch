@@ -62,7 +62,7 @@ void add_permute_node(
         !seen[permute_dim], "Argument dim ", permute_dim, "  is repeated");
     seen[permute_dim] = true;
 
-    out_dims.data[(4u - out_ndim) + i] = permute_dim + (4 - out_ndim);
+    out_dims[(4u - out_ndim) + i] = permute_dim + (4 - out_ndim);
   }
 
   std::string kernel_name = "permute";
@@ -90,7 +90,7 @@ void add_permute_node(
       graph.create_local_wg_size(out),
       {{out, vkapi::MemoryAccessType::WRITE},
        {in, vkapi::MemoryAccessType::READ}},
-      {t_out->texture_limits_ubo(),
+      {t_out->logical_limits_ubo(),
        t_out->sizes_ubo(),
        graph.create_params_buffer(params)},
       // Specialization Constants

@@ -27,13 +27,18 @@ namespace executorch_flatbuffer {
 struct Program;
 } // namespace executorch_flatbuffer
 
-namespace torch {
-namespace executor {
+namespace executorch {
+namespace runtime {
 
 namespace testing {
 // Provides test access to private Program methods.
 class ProgramTestFriend;
 } // namespace testing
+
+namespace deserialization {
+// Provides Tensor deserializaiton access to private Program methods.
+class TensorParser;
+} // namespace deserialization
 
 /**
  * A deserialized ExecuTorch program binary.
@@ -73,12 +78,12 @@ class Program final {
    * @param[in] verification The type of verification to do before returning
    *     success.
    */
-  __ET_NODISCARD static Result<Program> load(
+  ET_NODISCARD static Result<Program> load(
       DataLoader* loader,
       Verification verification = Verification::Minimal);
 
   /// DEPRECATED: Use the lowercase `load()` instead.
-  __ET_DEPRECATED __ET_NODISCARD static Result<Program> Load(
+  ET_DEPRECATED ET_NODISCARD static Result<Program> Load(
       DataLoader* loader,
       Verification verification = Verification::Minimal) {
     return load(loader, verification);
@@ -118,7 +123,8 @@ class Program final {
    *
    * @param[in] method_name The name of the method to load.
    * @param[in] memory_manager The allocators to use during initialization and
-   *     execution of the loaded method.
+   *     execution of the loaded method. If `memory_manager.temp_allocator()` is
+   *     null, the runtime will allocate temp memory using `et_pal_allocate()`.
    * @param[in] event_tracer The event tracer to use for this method run.
    *
    * @returns The loaded method on success, or an error on failure.
@@ -143,7 +149,7 @@ class Program final {
    *
    * @return The pytree encoding string for the output
    */
-  __ET_DEPRECATED Result<const char*> get_output_flattening_encoding(
+  ET_DEPRECATED Result<const char*> get_output_flattening_encoding(
       const char* method_name = "forward") const;
 
   /**
@@ -194,6 +200,7 @@ class Program final {
   friend class BackendDelegate;
   friend class Executor;
   friend class Method;
+  friend class deserialization::TensorParser;
   friend class testing::ProgramTestFriend;
 
   const executorch_flatbuffer::Program* get_internal_program() const {
@@ -209,7 +216,7 @@ class Program final {
   /**
    * Loads a segment by index.
    *
-   * @param[in] SegmentInfo Struct containing an index to load from the
+   * @param[in] segment_info Struct containing an index to load from the
    * Program.segments list. The other fields of the struct, such as
    * `segment_type` and `descriptor`, need to also be correct.
    *
@@ -220,8 +227,32 @@ class Program final {
    *     DataLoader: The Program.segment table is inconsistent, or the
    *     data cannot be accessed.
    */
-  __ET_NODISCARD Result<FreeableBuffer> LoadSegment(
+  ET_NODISCARD Result<FreeableBuffer> LoadSegment(
       const DataLoader::SegmentInfo& segment_info) const;
+
+  /**
+   * Loads a portion of a mutable segment into the provided buffer.
+   *
+   * @param[in] mutable_data_segments_index The index into the
+   * mutable_data_segments_array.
+   * @param[in] offset_index The index into the segment's offsets array.
+   * @param[in] size The number of bytes to load.
+   * @param[in] buffer The buffer to load data into. Must point to at least
+   * `size` bytes of memory.
+   *
+   * @returns An error code on if the load was successful.
+   * @retval Error::Ok The load was successful.
+   * @retval Error::NotFound The program does not contain any segments or the
+   *     indices are out of range.
+   * @returns Other errors depending on the implementation of
+   *     DataLoader: The Program.segment table is inconsistent, or the
+   *     data cannot be accessed.
+   */
+  ET_NODISCARD Error load_mutable_subsegment_into(
+      size_t mutable_data_segments_index,
+      size_t offset_index,
+      size_t size,
+      void* buffer) const;
 
  private:
   Program(
@@ -260,5 +291,13 @@ class Program final {
   FreeableBuffer constant_segment_data_;
 };
 
+} // namespace runtime
+} // namespace executorch
+
+namespace torch {
+namespace executor {
+// TODO(T197294990): Remove these deprecated aliases once all users have moved
+// to the new `::executorch` namespaces.
+using ::executorch::runtime::Program;
 } // namespace executor
 } // namespace torch

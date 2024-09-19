@@ -3,18 +3,21 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 # Utiliy functions for TOSA quantized lowerings
 
 import math
-from typing import NamedTuple
+from typing import NamedTuple, Sequence
 
 import numpy as np
 
 import serializer.tosa_serializer as ts
 import torch.fx
+import tosa.Op as TosaOp
 from executorch.backends.arm.tosa_mapping import map_dtype, TosaArg
 from executorch.exir.dialects._ops import ops as exir_ops
-from serializer.tosa_serializer import TosaOp, TosaSerializerTensor
+from serializer.tosa_serializer import TosaSerializerTensor
 from torch.fx import Node
 
 q_op = exir_ops.edge.quantized_decomposed.quantize_per_tensor.default
@@ -65,6 +68,7 @@ def is_quant_node(node: torch.fx.Node):
 
 
 def get_quant_node_dtype(node: torch.fx.Node):
+    # pyre-ignore[16]: Undefined attribute.
     if "tosa" in node.target.__name__:
         return node.meta["val"].dtype
 
@@ -171,7 +175,7 @@ def build_rescale(
     output_shape,
     input_zp,
     output_zp,
-    is_double_round,
+    is_double_round=False,
 ):
     scale_width = 32 if is_scale32(output_type) else 16
     multiplier, shift = compute_multiplier_and_shift(scale, scale_width)
@@ -197,7 +201,7 @@ def build_rescale(
 
 
 def build_rescale_to_int32(
-    tosa_fb, input, input_zp, rescale_scale, is_scale32=True, is_double_round=True
+    tosa_fb, input, input_zp, rescale_scale, is_scale32=True, is_double_round=False
 ) -> TosaSerializerTensor:
     multiplier, shift = compute_multiplier_and_shift(rescale_scale)
     attr_rescale = ts.TosaSerializerAttribute()
@@ -230,8 +234,8 @@ def build_rescale_from_int32(
     output_zp,
     rescale_scale,
     is_scale32=True,
-    is_double_round=True,
-) -> TosaSerializerTensor:
+    is_double_round=False,
+) -> None:
     multiplier, shift = compute_multiplier_and_shift(rescale_scale)
     attr_rescale_output = ts.TosaSerializerAttribute()
     attr_rescale_output.RescaleAttribute(
@@ -254,7 +258,7 @@ def build_rescale_from_int32(
 
 
 def rescale_nodes_to_int32(
-    nodes: list[Node], tosa_graph: ts.TosaSerializer
+    nodes: Sequence[Node], tosa_graph: ts.TosaSerializer
 ) -> tuple[list[TosaSerializerTensor], float]:
     """Rescales all 'nodes' to int32, adding suitable RESCALE ops to 'tosa_graph'.
     The scales are adjusted using the smallest scale of all 'nodes'.
@@ -329,9 +333,6 @@ def build_rescale_conv_output(
     output_scale,
     output_zp,
 ):
-    # Only use double round if we are doing 32 bit scaling
-    double_round = is_scale32(output_type)
-
     # TODO add check to verify if this is a Per-channel quantization.
     post_conv2d_scale = (input_scale.number * weight_scale.number) / output_scale.number
 
@@ -345,6 +346,5 @@ def build_rescale_conv_output(
         op.shape,
         0,
         output_zp.number,
-        double_round,
     )
     return

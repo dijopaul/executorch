@@ -3,6 +3,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 from typing import List
 
 import serializer.tosa_serializer as ts
@@ -40,6 +42,8 @@ class SliceVisitor(NodeVisitor):
         shape = input_node.shape
         dim = dim.number
         end = (shape[dim] + end.number) % shape[dim]
+        if end == 0:
+            end = shape[dim]
         size = end - start.number
         assert size > 0
         assert size <= shape[dim]

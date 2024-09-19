@@ -5,6 +5,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 #
 # Quantizer for Arm backend
 #
@@ -73,6 +75,7 @@ def _supported_symmetric_quantized_operators() -> Dict[str, List[OperatorPattern
             [torch.nn.AdaptiveAvgPool2d],
             [F.adaptive_avg_pool2d],
         ],
+        "mul": [torch.mul],
         "sub": [[torch.sub]],
     }
     return copy.deepcopy(supported_operators)
@@ -265,6 +268,9 @@ class ArmQuantizer(Quantizer):
         "sub",
         "mul",
         "sigmoid",
+        "mm",
+        "cat",
+        "one_to_one",
     ]
 
     def __init__(self) -> None:
@@ -385,7 +391,7 @@ class ArmQuantizer(Quantizer):
         for node in model.graph.nodes:
             if arm_quantizer_utils.is_annotated(node):
                 continue
-            if node.op == "placeholder":
+            if node.op == "placeholder" and len(node.users) > 0:
                 _annotate_output_qspec(
                     node,
                     quantization_config.get_output_act_qspec(),

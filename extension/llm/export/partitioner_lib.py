@@ -52,13 +52,15 @@ def get_mps_partitioner(use_kv_cache: bool = False):
         )
 
     compile_specs = [CompileSpec("use_fp16", bytes([True]))]
-    return MPSPartitioner(compile_specs)
+    return MPSPartitioner(compile_specs)  # pyre-fixme[16]
 
 
-def get_coreml_partitioner(use_kv_cache: bool = False):
-    assert (
-        use_kv_cache is True
-    ), "CoreML backend currently only supports static shape and use_kv_cache=True is the only way to support it at the moment"
+def get_coreml_partitioner(
+    ios: int = 15,
+    embedding_quantize: Optional[str] = None,
+    pt2e_quantize: Optional[str] = None,
+    coreml_quantize: Optional[str] = None,
+):
     try:
         import coremltools as ct
         from executorch.backends.apple.coreml.compiler import (  # pyre-ignore
@@ -72,19 +74,73 @@ def get_coreml_partitioner(use_kv_cache: bool = False):
             "Please install the CoreML backend follwing https://pytorch.org/executorch/main/build-run-coreml.html"
         )
 
-    compile_specs = CoreMLBackend.generate_compile_specs(
+    def _validate_ios_version() -> None:
+        assert ios in (15, 16, 17, 18)
+
+        if embedding_quantize is not None and ios < 18:
+            raise ValueError(
+                "In Core ML, per-block quantization is introduced in iOS 18"
+            )
+
+        use_quantization = pt2e_quantize is not None or coreml_quantize is not None
+        if use_quantization and ios < 16:
+            raise ValueError("In Core ML, quantization is introduced in iOS 16")
+
+        use_8a = (pt2e_quantize is not None and "8a" in pt2e_quantize) or (
+            coreml_quantize is not None and "8a" in coreml_quantize
+        )
+        if use_8a and ios < 17:
+            raise ValueError(
+                "In Core ML, 8-bit activation quantization is introduced in iOS 17"
+            )
+
+        use_4w = (pt2e_quantize is not None and "4w" in pt2e_quantize) or (
+            coreml_quantize is not None and "4w" in coreml_quantize
+        )
+        if use_4w and ios < 18:
+            raise ValueError(
+                "In Core ML, 4-bit weight compression is introduced in iOS 18"
+            )
+
+    _validate_ios_version()
+
+    minimum_deployment_target = {
+        15: ct.target.iOS15,
+        16: ct.target.iOS16,
+        17: ct.target.iOS17,
+        18: ct.target.iOS18,
+    }[ios]
+    op_linear_quantizer_config = None
+    if coreml_quantize == "b4w":
+        op_linear_quantizer_config = {
+            "mode": "linear_symmetric",
+            "dtype": "int4",
+            "granularity": "per_block",
+            "block_size": 32,
+            "weight_threshold": 512,
+        }
+    compile_specs = CoreMLBackend.generate_compile_specs(  # pyre-fixme[16]
+        minimum_deployment_target=minimum_deployment_target,
         compute_precision=ct.precision(ct.precision.FLOAT16.value),
         # using `ComputeUnit.ALL` can increase the model load time, default to `ComputeUnit.CPU_AND_GPU`
         compute_unit=ct.ComputeUnit[ct.ComputeUnit.CPU_AND_GPU.name.upper()],
-        model_type=CoreMLBackend.MODEL_TYPE.MODEL,
+        model_type=CoreMLBackend.MODEL_TYPE.MODEL,  # pyre-fixme[16]
+        op_linear_quantizer_config=op_linear_quantizer_config,
     )
-    return CoreMLPartitioner(
+
+    take_over_mutable_buffer = minimum_deployment_target >= ct.target.iOS18
+
+    return CoreMLPartitioner(  # pyre-fixme[16]
         compile_specs=compile_specs,
+        take_over_mutable_buffer=take_over_mutable_buffer,
     )
 
 
 def get_qnn_partitioner(
-    quant_dtype, use_kv_cache: bool = False, pt2e_quantize: Optional[str] = None
+    use_kv_cache: bool = False,
+    pt2e_quantize: Optional[str] = None,
+    num_sharding: int = 0,
+    soc_model: str = "SM8650",  # default to SM8650
 ):
     assert (
         use_kv_cache is True
@@ -94,9 +150,6 @@ def get_qnn_partitioner(
         from executorch.backends.qualcomm.partition.qnn_partitioner import (
             QnnPartitioner,
         )
-
-        # pyre-ignore: Undefined import [21]: Could not find a module corresponding to import `executorch.backends.qualcomm.quantizer.quantizer`
-        from executorch.backends.qualcomm.quantizer.quantizer import QuantDtype
 
         # pyre-ignore: Undefined import [21]: Could not find a module corresponding to import `executorch.backends.qualcomm.serialization.qnn_compile_spec_schema`
         from executorch.backends.qualcomm.serialization.qnn_compile_spec_schema import (
@@ -110,28 +163,22 @@ def get_qnn_partitioner(
         )
     except ImportError:
         raise ImportError(
-            "Please install the Qualcomm backend follwing https://pytorch.org/executorch/main/build-run-qualcomm-ai-engine-direct-backend.html"
+            "Please install the Qualcomm backend following https://pytorch.org/executorch/main/build-run-qualcomm-ai-engine-direct-backend.html"
         )
 
     use_fp16 = True
-    skip_node_op_set = {}
+    skip_node_op_set = {"llama.fallback.default", "aten.embedding.default"}
     if pt2e_quantize is not None:
         use_fp16 = False
-        # TODO: fix the lowering error without skipping nodes
 
-        if quant_dtype == QuantDtype.use_8a8w:
-            raise NotImplementedError("8a8w for llama is still under development")
-
-        elif quant_dtype == QuantDtype.use_16a16w:
-            raise NotImplementedError("16a16w for llama is still under development")
-
-        elif quant_dtype == QuantDtype.use_16a4w:
-            raise NotImplementedError("16a4w for llama is still under development")
-
-    return QnnPartitioner(
-        generate_qnn_executorch_compiler_spec(
-            soc_model=QcomChipset.SM8650,  # default to SM8650
-            backend_options=generate_htp_compiler_spec(use_fp16=use_fp16),
+    return QnnPartitioner(  # pyre-fixme[16]
+        generate_qnn_executorch_compiler_spec(  # pyre-fixme[16]
+            soc_model=getattr(QcomChipset, soc_model),  # pyre-fixme[16]
+            # pyre-fixme[16]
+            backend_options=generate_htp_compiler_spec(
+                use_fp16=use_fp16,
+                use_multi_contexts=num_sharding > 0,
+            ),
             debug=False,
             saver=False,
         ),

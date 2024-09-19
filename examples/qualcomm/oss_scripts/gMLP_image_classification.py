@@ -15,7 +15,7 @@ import timm
 import torch
 
 from executorch.backends.qualcomm.quantizer.quantizer import QuantDtype
-from executorch.examples.qualcomm.scripts.utils import (
+from executorch.examples.qualcomm.utils import (
     build_executorch_binary,
     make_output_dir,
     parse_skip_delegation_node,
@@ -96,12 +96,6 @@ def main(args):
     if args.compile_only:
         sys.exit(0)
 
-    # setup required paths accordingly
-    # qnn_sdk       : QNN SDK path setup in environment variable
-    # build_path : path where artifacts were built
-    # pte_path      : path where QNN delegate executorch binary was stored
-    # device_id     : serial number of android device
-    # workspace     : folder for storing artifacts on android device
     adb = SimpleADB(
         qnn_sdk=os.getenv("QNN_SDK_ROOT"),
         build_path=f"{args.build_folder}",

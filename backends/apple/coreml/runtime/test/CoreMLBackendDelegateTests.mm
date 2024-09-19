@@ -13,6 +13,8 @@
 #import <executorch/runtime/platform/runtime.h>
 #import <string>
 
+#import "MLModel_Prewarm.h"
+
 static constexpr size_t kRuntimeMemorySize = 50 * 1024U * 1024U; // 50 MB
 
 using namespace torch::executor;
@@ -25,14 +27,14 @@ NSData * _Nullable read_data(const std::string& filePath) {
     return [NSData dataWithContentsOfURL:url];
 }
 
-class DataLoaderImpl: public DataLoader {
+class DataLoaderImpl final : public DataLoader {
 public:
     DataLoaderImpl(std::string filePath)
     :data_(read_data(filePath))
     {}
 
     Result<FreeableBuffer> load(
-        size_t offset, size_t size, __ET_UNUSED const DataLoader::SegmentInfo& segment_info) override {
+        size_t offset, size_t size, ET_UNUSED const DataLoader::SegmentInfo& segment_info) const override {
         NSData *subdata = [data_ subdataWithRange:NSMakeRange(offset, size)];
         return FreeableBuffer(subdata.bytes, size, nullptr);
     }
@@ -42,7 +44,7 @@ public:
     }
 
 private:
-   NSData *data_;
+   NSData * const data_;
 };
 
 using Buffer = std::vector<uint8_t>;
@@ -184,20 +186,28 @@ Result<std::vector<Buffer>> prepare_input_tensors(Method& method) {
 - (void)testAddProgramExecute {
     NSURL *modelURL = [[self class] bundledResourceWithName:@"add_coreml_all" extension:@"pte"];
     XCTAssertNotNil(modelURL);
-    [self executeModelAtURL:modelURL nLoads:5 nExecutions:2];
+    [self executeModelAtURL:modelURL nLoads:1 nExecutions:2];
 }
 
 - (void)testMulProgramExecute {
     NSURL *modelURL = [[self class] bundledResourceWithName:@"mul_coreml_all" extension:@"pte"];
     XCTAssertNotNil(modelURL);
-    [self executeModelAtURL:modelURL nLoads:5 nExecutions:2];
+    [self executeModelAtURL:modelURL nLoads:1 nExecutions:2];
 }
 
 - (void)testMV3ProgramExecute {
     NSURL *modelURL = [[self class] bundledResourceWithName:@"mv3_coreml_all" extension:@"pte"];
     XCTAssertNotNil(modelURL);
-    [self executeModelAtURL:modelURL nLoads:5 nExecutions:2];
+    [self executeModelAtURL:modelURL nLoads:1 nExecutions:2];
 }
+
+#if MODEL_STATE_IS_SUPPORTED
+- (void)testStateProgramExecute {
+    NSURL *modelURL = [[self class] bundledResourceWithName:@"state_coreml_all" extension:@"pte"];
+    XCTAssertNotNil(modelURL);
+    [self executeModelAtURL:modelURL nLoads:1 nExecutions:2];
+}
+#endif
 
 - (void)executeMultipleModelsConcurrently:(NSArray<NSURL *> *)modelURLs
                                    nLoads:(NSUInteger)nLoads

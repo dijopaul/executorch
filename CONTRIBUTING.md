@@ -23,6 +23,8 @@ We actively welcome your pull requests (PRs).
    See the [testing section](#testing) for more information.
 1. If you've changed APIs or added a new tool or feature, [update the
    documentation](#updating-documentation).
+1. If you added an experimental API or deprecated an existing API, follow the
+   [API Life Cycle and Deprecation Policy](/docs/source/api-life-cycle.md).
 1. Make sure your code follows the [style guides](#coding-style) and passes the
    [lint checks](#lintrunner).
 1. If you haven't already, complete the [Contributor License Agreement ("CLA")](#contributor-license-agreement-cla).
@@ -129,9 +131,7 @@ for detailed advice.
 
 #### C++ language version
 
-**C++11.**
-
-NOTE: The code does not yet fully conform to this, and some files require C++17.
+**C++17.**
 
 Rationale: This is a compromise between being compatible with older, proprietary
 toolchains, and having access to relatively modern C++ features.

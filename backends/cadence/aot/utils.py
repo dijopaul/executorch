@@ -104,11 +104,11 @@ def get_ops_count(graph_module: torch.fx.GraphModule) -> Dict[str, int]:
             ):
                 continue
             # If the op is already present, increment the count
-            if get_edge_overload_packet(node.target).__name__ in freq:
-                freq[get_edge_overload_packet(node.target).__name__] += 1
+            if node.target._name in freq:
+                freq[node.target._name] += 1
             # else, add a new entry
             else:
-                freq[get_edge_overload_packet(node.target).__name__] = 1
+                freq[node.target._name] = 1
     return freq
 
 
@@ -177,3 +177,11 @@ def print_ops_info(
                 tablefmt="outline",
             )
         )
+
+
+def model_gm_has_SDPA(model_gm: torch.fx.GraphModule) -> bool:
+    for node in model_gm.graph.nodes:
+        if node.op == "call_function":
+            if node.target == torch.ops.aten.scaled_dot_product_attention.default:
+                return True
+    return False
