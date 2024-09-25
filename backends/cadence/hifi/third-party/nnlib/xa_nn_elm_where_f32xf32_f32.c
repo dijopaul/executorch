@@ -120,6 +120,188 @@ WORD32 xa_nn_elm_where_f32xf32_f32(FLOAT32 * __restrict__ p_out,
     }
 }
 
+static void internal_elm_where_broadcast_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+                    const    FLOAT32 * __restrict__ p_inp1,
+                    const    FLOAT32 * __restrict__ p_inp2,
+                    const    unsigned char * __restrict__ p_condition,
+                             WORD32  num_elm,
+                             xtbool  sign_flag)
+{
+  int i;
+  xtfloatx2  * __restrict__ p_a = (xtfloatx2 *)p_inp1;
+  xtfloatx2  * __restrict__ p_b = (xtfloatx2 *)p_inp2; 
+  xtfloatx2  *__restrict__  p_c =  (xtfloatx2 *)p_out;
+  unsigned char *condition = p_condition;
+
+  const int num_simd2_ops = num_elm >> 1;
+  const int num_scalar_ops = num_elm & 1;
+
+  xtfloat a0_7, out;
+  xtfloatx2 x1, x2, y;
+  x2 = XT_LSI((xtfloat *)p_b, 0);
+
+  unsigned char con1, con2;
+  xtbool2 con = int32_rtor_xtbool2(0x00000003);
+
+  /* For out = condition ? inp2 :inp1 */
+  if(sign_flag){
+    if(((((unsigned)p_a)&7) == 0) && ((((unsigned)p_c)&7) == 0))
+    {
+      for(i=0; i<num_simd2_ops; i++)
+      {
+        XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
+        con1 = XT_L8UI(condition, 0);
+        condition++;
+        con2 = XT_L8UI(condition, 0);
+        condition++;
+        con = AE_MOVBA1X2(con1, con2);
+        XT_MOVT_SX2 (y, x2, con);
+        XT_MOVF_SX2 (y, x1, con);
+        XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
+      }
+    }
+    else
+    {
+      ae_valign inp1_a, out_a;
+      inp1_a = XT_LASX2PP(p_a);
+      out_a = AE_ZALIGN64();      
+      for(i=0; i<num_simd2_ops; i++)
+      {
+        XT_LASX2IP(x1, inp1_a, p_a);
+        con1 = XT_L8UI(condition, 0);
+        condition++;
+        con2 = XT_L8UI(condition, 0);
+        condition++;
+        con = AE_MOVBA1X2(con1, con2);
+        XT_MOVT_SX2 (y, x2, con);
+        XT_MOVF_SX2 (y, x1, con);
+        XT_SASX2IP(y, out_a, p_c);
+      }
+      XT_SASX2POSFP(out_a, (xtfloatx2 *)p_c);   
+    }  
+    if(num_scalar_ops !=0)
+    {
+      XT_LSIP(a0_7, (xtfloat *)p_a, sizeof(FLOAT32));
+      con1 = XT_L8UI(condition, 0);
+      xtbool s = AE_MOVBA(con1);
+      XT_MOVT_S(out, x2, s);
+      XT_MOVF_S(out, a0_7, s);  
+      XT_SSI(out, (xtfloat *)p_c, 0);
+    }
+  }
+  /* For out = condition ? inp1 :inp2 */
+  else
+  {
+    if(((((unsigned)p_a)&7) == 0) && ((((unsigned)p_c)&7) == 0))
+    {
+      for(i=0; i<num_simd2_ops; i++)
+      {
+        XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
+        con1 = XT_L8UI(condition, 0);
+        condition++;
+        con2 = XT_L8UI(condition, 0);
+        condition++;
+        con = AE_MOVBA1X2(con1, con2);
+        XT_MOVT_SX2 (y, x1, con);
+        XT_MOVF_SX2 (y, x2, con);
+        XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
+      }
+    }
+    else
+    {
+      ae_valign inp1_a, out_a;
+      inp1_a = XT_LASX2PP(p_a);
+      out_a = AE_ZALIGN64();       
+      for(i=0; i<num_simd2_ops; i++)
+      {
+        XT_LASX2IP(x1, inp1_a, p_a);
+        con1 = XT_L8UI(condition, 0);
+        condition++;
+        con2 = XT_L8UI(condition, 0);
+        condition++;
+        con = AE_MOVBA1X2(con1, con2);
+        XT_MOVT_SX2 (y, x1, con);
+        XT_MOVF_SX2 (y, x2, con);
+        XT_SASX2IP(y, out_a, p_c);
+      }
+      XT_SASX2POSFP(out_a, (xtfloatx2 *)p_c);
+    }
+    if(num_scalar_ops !=0)
+    {
+      XT_LSIP(a0_7, (xtfloat *)p_a, sizeof(FLOAT32));
+      con1 = XT_L8UI(condition, 0);
+      xtbool s = AE_MOVBA(con1);
+      XT_MOVT_S(out, a0_7, s);
+      XT_MOVF_S(out, x2, s);    
+      XT_SSI(out, (xtfloat *)p_c, 0);
+    }    
+  }
+}
+
+static void internal_elm_where_broadcast_both_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+                    const    FLOAT32 * __restrict__ p_inp1,
+                    const    FLOAT32 * __restrict__ p_inp2,
+                    const    unsigned char * __restrict__ p_condition,
+                             WORD32  num_elm)
+{
+  int i;
+  xtfloatx2  * __restrict__ p_a = (xtfloatx2 *)p_inp1;
+  xtfloatx2  * __restrict__ p_b = (xtfloatx2 *)p_inp2; 
+  xtfloatx2  *__restrict__  p_c =  (xtfloatx2 *)p_out;
+  unsigned char *condition = p_condition;
+
+  const int num_simd2_ops = num_elm >> 1;
+  const int num_scalar_ops = num_elm & 1;
+
+  xtfloat a0_7, out;
+  xtfloatx2 x1, x2, y;
+  x2 = XT_LSI((xtfloat *)p_b, 0);
+  x1 = XT_LSI((xtfloat *)p_a, 0);
+
+  unsigned char con1, con2;
+  xtbool2 con = int32_rtor_xtbool2(0x00000003);
+
+    if((((unsigned)p_c)&7) == 0)
+    {
+      for(i=0; i<num_simd2_ops; i++)
+      {
+        con1 = XT_L8UI(condition, 0);
+        condition++;
+        con2 = XT_L8UI(condition, 0);
+        condition++;
+        con = AE_MOVBA1X2(con1, con2);
+        XT_MOVT_SX2 (y, x1, con);
+        XT_MOVF_SX2 (y, x2, con);
+        XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
+      }
+    }
+    else
+    {
+      ae_valign out_a;
+      out_a = AE_ZALIGN64();       
+      for(i=0; i<num_simd2_ops; i++)
+      {
+        con1 = XT_L8UI(condition, 0);
+        condition++;
+        con2 = XT_L8UI(condition, 0);
+        condition++;
+        con = AE_MOVBA1X2(con1, con2);
+        XT_MOVT_SX2 (y, x1, con);
+        XT_MOVF_SX2 (y, x2, con);
+        XT_SASX2IP(y, out_a, p_c);
+      }
+      XT_SASX2POSFP(out_a, (xtfloatx2 *)p_c);
+    }
+    if(num_scalar_ops !=0)
+    {
+      con1 = XT_L8UI(condition, 0);
+      xtbool s = AE_MOVBA(con1);
+      XT_MOVT_S(out, x1, s);
+      XT_MOVF_S(out, x2, s);    
+      XT_SSI(out, (xtfloat *)p_c, 0);
+    }
+}
+
 static void internal_elm_where_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
                     const    FLOAT32 * __restrict__ p_inp1,
                     const    FLOAT32 * __restrict__ p_inp2,
@@ -268,123 +450,96 @@ static void internal_elm_where_broadcast_2D_f32xf32_f32(FLOAT32 * __restrict__ p
     }  
   }
 }
-static void internal_elm_where_broadcast_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+
+static void internal_elm_where_broadcast_both_2D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
                     const    FLOAT32 * __restrict__ p_inp1,
                     const    FLOAT32 * __restrict__ p_inp2,
                     const    unsigned char * __restrict__ p_condition,
-                             WORD32  num_elm,
-                             xtbool  sign_flag)
+                             WORD32  out_lc,
+                             WORD32  in_lc)
 {
-  int i;
+  int i, j;
+
   xtfloatx2  * __restrict__ p_a = (xtfloatx2 *)p_inp1;
   xtfloatx2  * __restrict__ p_b = (xtfloatx2 *)p_inp2; 
   xtfloatx2  *__restrict__  p_c =  (xtfloatx2 *)p_out;
   unsigned char *condition = p_condition;
+  
+  int num_simd2_ops;
+  int num_scalar_ops;
 
-  const int num_simd2_ops = num_elm >> 1;
-  const int num_scalar_ops = num_elm & 1;
-
-  xtfloat a0_7, out;
-  xtfloatx2 x1, x2, y;
-  x2 = XT_LSI((xtfloat *)p_b, 0);
-
-  unsigned char con1, con2;
-  xtbool2 con = int32_rtor_xtbool2(0x00000003);
-
-  /* For out = condition ? inp1 :inp1 */
-  if(sign_flag){
-    if(((((unsigned)p_a)&7) == 0) && ((((unsigned)p_c)&7) == 0))
-    {
-      for(i=0; i<num_simd2_ops; i++)
-      {
-        XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
-        con1 = XT_L8UI(condition, 0);
-        condition++;
-        con2 = XT_L8UI(condition, 0);
-        condition++;
-        con = AE_MOVBA1X2(con1, con2);
-        XT_MOVT_SX2 (y, x2, con);
-        XT_MOVF_SX2 (y, x1, con);
-        XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
-      }
-    }
-    else
-    {
-      ae_valign inp1_a, out_a;
-      inp1_a = XT_LASX2PP(p_a);
-      out_a = AE_ZALIGN64();      
-      for(i=0; i<num_simd2_ops; i++)
-      {
-        XT_LASX2IP(x1, inp1_a, p_a);
-        con1 = XT_L8UI(condition, 0);
-        condition++;
-        con2 = XT_L8UI(condition, 0);
-        condition++;
-        con = AE_MOVBA1X2(con1, con2);
-        XT_MOVT_SX2 (y, x2, con);
-        XT_MOVF_SX2 (y, x1, con);
-        XT_SASX2IP(y, out_a, p_c);
-      }
-      XT_SASX2POSFP(out_a, (xtfloatx2 *)p_c);   
-    }  
-    if(num_scalar_ops !=0)
-    {
-      XT_LSIP(a0_7, (xtfloat *)p_a, sizeof(FLOAT32));
-      con1 = XT_L8UI(condition, 0);
-      xtbool s = AE_MOVBA(con1);
-      XT_MOVT_S(out, x2, s);
-      XT_MOVF_S(out, a0_7, s);  
-      XT_SSI(out, (xtfloat *)p_c, 0);
-    }
+  if(out_lc)
+  {
+    num_simd2_ops = in_lc >> 1;
+    num_scalar_ops = in_lc & 1;
   }
-  /* For out = condition ? inp1 :inp1 */
   else
   {
-    if(((((unsigned)p_a)&7) == 0) && ((((unsigned)p_c)&7) == 0))
-    {
-      for(i=0; i<num_simd2_ops; i++)
-      {
-        XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
-        con1 = XT_L8UI(condition, 0);
-        condition++;
-        con2 = XT_L8UI(condition, 0);
-        condition++;
-        con = AE_MOVBA1X2(con1, con2);
-        XT_MOVT_SX2 (y, x1, con);
-        XT_MOVF_SX2 (y, x2, con);
-        XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
-      }
-    }
-    else
-    {
-      ae_valign inp1_a, out_a;
-      inp1_a = XT_LASX2PP(p_a);
-      out_a = AE_ZALIGN64();       
-      for(i=0; i<num_simd2_ops; i++)
-      {
-        XT_LASX2IP(x1, inp1_a, p_a);
-        con1 = XT_L8UI(condition, 0);
-        condition++;
-        con2 = XT_L8UI(condition, 0);
-        condition++;
-        con = AE_MOVBA1X2(con1, con2);
-        XT_MOVT_SX2 (y, x1, con);
-        XT_MOVF_SX2 (y, x2, con);
-        XT_SASX2IP(y, out_a, p_c);
-      }
-      XT_SASX2POSFP(out_a, (xtfloatx2 *)p_c);
-    }
-    if(num_scalar_ops !=0)
-    {
-      XT_LSIP(a0_7, (xtfloat *)p_a, sizeof(FLOAT32));
-      con1 = XT_L8UI(condition, 0);
-      xtbool s = AE_MOVBA(con1);
-      XT_MOVT_S(out, a0_7, s);
-      XT_MOVF_S(out, x2, s);    
-      XT_SSI(out, (xtfloat *)p_c, 0);
-    }    
+    num_simd2_ops = (in_lc >> 2) << 1;
+    num_scalar_ops = in_lc & 3;
   }
+
+    xtfloatx2 x1, x2, y;
+    xtfloat a0, b0, c0;
+    unsigned char con1, con2;
+    xtbool2 con = int32_rtor_xtbool2(0x00000003);
+
+    for(i = 0; i < out_lc; i++)
+    {
+      p_a = (xtfloatx2 *)p_inp1;
+      p_b = (xtfloatx2 *)p_inp2;
+      p_c = (xtfloatx2 *)&p_out[i * in_lc];
+      condition = &p_condition[i * in_lc];
+      if(((((unsigned)p_a)&7) == 0) && ((((unsigned)p_b)&7) == 0) && ((((unsigned)p_c)&7) == 0))
+      {
+        for(j = 0; j < num_simd2_ops; j++)
+        {
+          XT_LSX2IP(x1, p_a, 2 * sizeof(FLOAT32));
+          XT_LSX2IP(x2, p_b, 2 * sizeof(FLOAT32));
+          con1 = XT_L8UI(condition, 0);
+          condition++;
+          con2 = XT_L8UI(condition, 0);
+          condition++;
+          con = AE_MOVBA1X2(con1, con2);
+          XT_MOVT_SX2 (y, x1, con);
+          XT_MOVF_SX2 (y, x2, con);
+          XT_SSX2IP(y, p_c, 2 * sizeof(FLOAT32)); 
+        }
+      }
+      else
+      {
+        ae_valign vinp1, vinp2, out_a = AE_ZALIGN64();
+        vinp1 = XT_LASX2PP(p_a);
+        vinp2 = XT_LASX2PP(p_b);
+
+        for(j = 0; j < num_simd2_ops; j++)
+        {
+          XT_LASX2IP(x1, vinp1, p_a);
+          XT_LASX2IP(x2, vinp2, p_b);
+          con1 = XT_L8UI(condition, 0);
+          condition++;
+          con2 = XT_L8UI(condition, 0);
+          condition++;
+          con = AE_MOVBA1X2(con1, con2);
+          XT_MOVT_SX2 (y, x1, con);
+          XT_MOVF_SX2 (y, x2, con);
+          XT_SASX2IP(y, out_a, p_c); 
+        }
+        XT_SASX2POSFP(out_a, (xtfloatx2 *)p_c);
+      }
+      if(num_scalar_ops !=0)
+      {
+        XT_LSIP(a0, (xtfloat *)p_a, 0);
+        XT_LSIP(b0, (xtfloat *)p_b, 0);
+        con1 = XT_L8UI(condition, 0);
+        xtbool s = AE_MOVBA(con1);
+        XT_MOVT_S(c0, a0, s);
+        XT_MOVF_S(c0, b0, s);   
+        XT_SSI(c0, (xtfloat *)p_c, 0);
+      }      
+    }  
 }
+
 WORD32 xa_nn_elm_where_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
                       const WORD32 *const p_out_shape,
                       const FLOAT32 * __restrict__ p_inp1,
@@ -419,13 +574,11 @@ WORD32 xa_nn_elm_where_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
   xtbool sign_flag;
   for(i = 0; i < 4; i++)
   {
-    if((p_inp1_shape[i] != p_inp2_shape[i] && p_inp1_shape[i] != 1 && p_inp2_shape[i] != 1) ||
-       (p_out_shape[i] != (p_inp1_shape[i] > p_inp2_shape[i] ? p_inp1_shape[i] : p_inp2_shape[i])))
+    if((p_inp1_shape[i] != p_inp2_shape[i]) && ((p_inp1_shape[i] != 1) && (p_inp2_shape[i] != 1)))
     {
       return -1;
     }
   }
-
   WORD32 inp1_strides[4], inp2_strides[4];
   inp1_strides[3] = 1;
   inp2_strides[3] = 1;
@@ -443,19 +596,24 @@ WORD32 xa_nn_elm_where_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
   int inp1_const = 1, inp2_const = 1;
   for(i = 0; i < 4; i++)
   {
-    if(p_inp1_shape[i] != p_inp2_shape[i])
-    {
       if(p_inp1_shape[i] == 1)
-        inp1_strides[i] = 0;
+      {
+          inp1_strides[i] = 0;
+          need_broadcast = 1;
+      }
       else
-        inp2_strides[i] = 0;
-
-      need_broadcast = 1;
-    }
-    if(p_inp1_shape[i] != 1)
-      inp1_const &= 0;
-    if(p_inp2_shape[i] != 1)
-      inp2_const &= 0;
+      {
+          inp1_const &= 0;
+      }
+      if(p_inp2_shape[i] == 1)
+      {
+          inp2_strides[i] = 0;
+          need_broadcast = 1;
+      }
+      else
+      {
+          inp2_const &= 0;
+      }
   }
 
   int itr0, itr1, itr2;
@@ -476,128 +634,205 @@ WORD32 xa_nn_elm_where_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
                 p_out_shape[0] * inp1_strides[0],
                 sign_flag);
   }
-  else if(inp1_strides[3] == inp2_strides[3])
+  else if((inp1_strides[3] == 1)&& (inp2_strides[3] == 1))
   {
     WORD32 in_lc, out_lc;
     sign_flag = 0;
     in_lc = p_out_shape[2] * p_out_shape[3];
     out_lc = 1;
-    if(inp1_strides[2] == 0)
+    if((inp1_strides[2] == 0) && (inp2_strides[2] == 0))
     {
-      const FLOAT32 *tmp;
-      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
-      sign_flag = 1;
-      int tmp_strides[2];
-      tmp_strides[0] = inp1_strides[0];
-      tmp_strides[1] = inp1_strides[1];
-
-      inp1_strides[0] = inp2_strides[0];
-      inp1_strides[1] = inp2_strides[1];
-
-      inp2_strides[0] = tmp_strides[0];
-      inp2_strides[1] = tmp_strides[1];
-      in_lc = p_out_shape[3];
-      out_lc = p_out_shape[2];
+        in_lc = p_out_shape[3];
+        out_lc = p_out_shape[2];
+        for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
+        {
+          const FLOAT32 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
+          const FLOAT32 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
+          for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
+          {
+            internal_elm_where_broadcast_both_2D_f32xf32_f32(
+                p_out_tmp,
+                p_inp1_tmp0,
+                p_inp2_tmp0,
+                p_condition_temp,
+                out_lc,
+                in_lc);
+            p_out_tmp += in_lc * out_lc;
+            p_inp1_tmp0 += inp1_strides[1];
+            p_inp2_tmp0 += inp2_strides[1];
+            p_condition_temp += in_lc * out_lc;
+          }
+          p_inp1_tmp += inp1_strides[0];
+          p_inp2_tmp += inp2_strides[0];
+        }
     }
-    else if(inp2_strides[2] == 0)
+    else
     {
-      in_lc = p_out_shape[3];
-      out_lc = p_out_shape[2];
-    }
+        if(inp1_strides[2] == 0)
+        {
+          const FLOAT32 *tmp;
+          tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
+          sign_flag = 1;
+          int tmp_strides[2];
+          tmp_strides[0] = inp1_strides[0];
+          tmp_strides[1] = inp1_strides[1];
 
-    for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
-    {
-      const FLOAT32 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
-      const FLOAT32 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
-      for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
-      {
-        internal_elm_where_broadcast_2D_f32xf32_f32(
-            p_out_tmp,
-            p_inp1_tmp0,
-            p_inp2_tmp0,
-            p_condition_temp,
-            out_lc,
-            in_lc,
-            sign_flag);
-        p_out_tmp += in_lc * out_lc;
-        p_inp1_tmp0 += inp1_strides[1];
-        p_inp2_tmp0 += inp2_strides[1];
-        p_condition_temp += in_lc * out_lc;
-      }
+          inp1_strides[0] = inp2_strides[0];
+          inp1_strides[1] = inp2_strides[1];
 
-      p_inp1_tmp += inp1_strides[0];
-      p_inp2_tmp += inp2_strides[0];
+          inp2_strides[0] = tmp_strides[0];
+          inp2_strides[1] = tmp_strides[1];
+          in_lc = p_out_shape[3];
+          out_lc = p_out_shape[2];
+        }
+        else if(inp2_strides[2] == 0)
+        {
+          in_lc = p_out_shape[3];
+          out_lc = p_out_shape[2];
+        }
+
+        for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
+        {
+          const FLOAT32 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
+          const FLOAT32 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
+          for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
+          {
+            internal_elm_where_broadcast_2D_f32xf32_f32(
+                p_out_tmp,
+                p_inp1_tmp0,
+                p_inp2_tmp0,
+                p_condition_temp,
+                out_lc,
+                in_lc,
+                sign_flag);
+            p_out_tmp += in_lc * out_lc;
+            p_inp1_tmp0 += inp1_strides[1];
+            p_inp2_tmp0 += inp2_strides[1];
+            p_condition_temp += in_lc * out_lc;
+          }
+
+          p_inp1_tmp += inp1_strides[0];
+          p_inp2_tmp += inp2_strides[0];
+        }
     }
   }
   else if(inp1_const == 1 || inp2_const == 1)
   {
-    sign_flag = 0;
-    if(inp1_strides[3] == 0)
+    if((inp1_const == 1)&&(inp2_const == 1))
     {
-      sign_flag = 1;
-      const FLOAT32 *tmp;
-      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
+        internal_elm_where_broadcast_both_f32xf32_f32(
+            p_out_tmp,
+            p_inp1_tmp,
+            p_inp2_tmp,
+            p_condition_temp,
+            p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3]);
     }
-    internal_elm_where_broadcast_f32xf32_f32(
-        p_out_tmp,
-        p_inp1_tmp,
-        p_inp2_tmp,
-        p_condition_temp,
-        p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3],
-        sign_flag);
+    else
+    {
+        sign_flag = 0;
+        if(inp1_strides[3] == 0)
+        {
+          sign_flag = 1;
+          const FLOAT32 *tmp;
+          tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
+        }
+        internal_elm_where_broadcast_f32xf32_f32(
+            p_out_tmp,
+            p_inp1_tmp,
+            p_inp2_tmp,
+            p_condition_temp,
+            p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3],
+            sign_flag);
+    }
   }
   else
   {
     sign_flag = 0;
-    if(inp1_strides[3] == 0)
+    if((inp1_strides[3] == 0) && (inp2_strides[3] == 0))
     {
-      const FLOAT32 *tmp;
-      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
-      sign_flag = 1;
-      int tmp_strides[3];
-      tmp_strides[0] = inp1_strides[0];
-      tmp_strides[1] = inp1_strides[1];
-      tmp_strides[2] = inp1_strides[2];
-
-      inp1_strides[0] = inp2_strides[0];
-      inp1_strides[1] = inp2_strides[1];
-      inp1_strides[2] = inp2_strides[2];
-
-      inp2_strides[0] = tmp_strides[0];
-      inp2_strides[1] = tmp_strides[1];
-      inp2_strides[2] = tmp_strides[2];
-    }
-    for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
-    {
-      const FLOAT32 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
-      const FLOAT32 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
-      for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
-      {
-        const FLOAT32 *__restrict__ p_inp1_tmp1 = p_inp1_tmp0;
-        const FLOAT32 *__restrict__ p_inp2_tmp1 = p_inp2_tmp0;
-        for(itr2 = 0; itr2 < p_out_shape[2]; itr2++)
+        for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
         {
+          const FLOAT32 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
+          const FLOAT32 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
+          for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
           {
-            internal_elm_where_broadcast_f32xf32_f32(
-                p_out_tmp,
-                p_inp1_tmp1,
-                p_inp2_tmp1,
-                p_condition_temp,
-                p_out_shape[3], 
-                sign_flag);
+            const FLOAT32 *__restrict__ p_inp1_tmp1 = p_inp1_tmp0;
+            const FLOAT32 *__restrict__ p_inp2_tmp1 = p_inp2_tmp0;
+            for(itr2 = 0; itr2 < p_out_shape[2]; itr2++)
+            {
+              {
+                internal_elm_where_broadcast_both_f32xf32_f32(
+                    p_out_tmp,
+                    p_inp1_tmp1,
+                    p_inp2_tmp1,
+                    p_condition_temp,
+                    p_out_shape[3]);
+              }
+              p_out_tmp += p_out_shape[3];
+              p_inp1_tmp1 += inp1_strides[2];
+              p_inp2_tmp1 += inp2_strides[2];
+              p_condition_temp += p_out_shape[3];
+            }
+            p_inp1_tmp0 += inp1_strides[1];
+            p_inp2_tmp0 += inp2_strides[1];
           }
-          p_out_tmp += p_out_shape[3];
-          p_inp1_tmp1 += inp1_strides[2];
-          p_inp2_tmp1 += inp2_strides[2];
-          p_condition_temp += p_out_shape[3];
+          p_inp1_tmp += inp1_strides[0];
+          p_inp2_tmp += inp2_strides[0];
         }
-        p_inp1_tmp0 += inp1_strides[1];
-        p_inp2_tmp0 += inp2_strides[1];
-      }
-      p_inp1_tmp += inp1_strides[0];
-      p_inp2_tmp += inp2_strides[0];
+    }
+    else
+    {
+        if(inp1_strides[3] == 0)
+        {
+          const FLOAT32 *tmp;
+          tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
+          sign_flag = 1;
+          int tmp_strides[3];
+          tmp_strides[0] = inp1_strides[0];
+          tmp_strides[1] = inp1_strides[1];
+          tmp_strides[2] = inp1_strides[2];
+
+          inp1_strides[0] = inp2_strides[0];
+          inp1_strides[1] = inp2_strides[1];
+          inp1_strides[2] = inp2_strides[2];
+
+          inp2_strides[0] = tmp_strides[0];
+          inp2_strides[1] = tmp_strides[1];
+          inp2_strides[2] = tmp_strides[2];
+        }
+        for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
+        {
+          const FLOAT32 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
+          const FLOAT32 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
+          for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
+          {
+            const FLOAT32 *__restrict__ p_inp1_tmp1 = p_inp1_tmp0;
+            const FLOAT32 *__restrict__ p_inp2_tmp1 = p_inp2_tmp0;
+            for(itr2 = 0; itr2 < p_out_shape[2]; itr2++)
+            {
+              {
+                internal_elm_where_broadcast_f32xf32_f32(
+                    p_out_tmp,
+                    p_inp1_tmp1,
+                    p_inp2_tmp1,
+                    p_condition_temp,
+                    p_out_shape[3], 
+                    sign_flag);
+              }
+              p_out_tmp += p_out_shape[3];
+              p_inp1_tmp1 += inp1_strides[2];
+              p_inp2_tmp1 += inp2_strides[2];
+              p_condition_temp += p_out_shape[3];
+            }
+            p_inp1_tmp0 += inp1_strides[1];
+            p_inp2_tmp0 += inp2_strides[1];
+          }
+          p_inp1_tmp += inp1_strides[0];
+          p_inp2_tmp += inp2_strides[0];
+        }
     }
   }
   return 0;
 }
+
 #endif
