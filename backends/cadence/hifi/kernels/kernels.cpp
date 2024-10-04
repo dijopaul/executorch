@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <executorch/backends/cadence/hifi/kernels/kernels.h>
+#include <kernels.h>
 #include <xa_nnlib_common.h>
 #include <xa_nnlib_common_macros.h>
 

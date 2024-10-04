@@ -24,6 +24,7 @@ set(_aten_ops__srcs
     "${CMAKE_CURRENT_SOURCE_DIR}/op_embedding.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/op_full.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/op_view_copy.cpp"
+	"${EXECUTORCH_ROOT}/kernels/portable/cpu/util/slice_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/activation_ops_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/copy_ops_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/broadcast_util.cpp"

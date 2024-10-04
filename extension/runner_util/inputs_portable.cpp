@@ -28,15 +28,16 @@ namespace internal {
 
 namespace {
 /**
- * Sets all elements of a tensor to 1.
+ * Sets all elements of a tensor to random.
  */
+ float random()
+{
+    return (float)std::rand()/RAND_MAX;
+}
 Error fill_ones(torch::executor::Tensor tensor) {
 #define FILL_CASE(T, n)                                \
   case (torch::executor::ScalarType::n):               \
-    std::fill(                                         \
-        tensor.mutable_data_ptr<T>(),                  \
-        tensor.mutable_data_ptr<T>() + tensor.numel(), \
-        1);                                            \
+    std::generate(tensor.mutable_data_ptr<T>(),tensor.mutable_data_ptr<T>() + tensor.numel(), random);                                            \
     break;
 
   switch (tensor.scalar_type()) {
