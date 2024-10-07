@@ -12,9 +12,7 @@
 #include <algorithm>
 #include <cmath>
 
-
 #define ALIGN_PTR(x, bytes)     ((((unsigned)(x))+(bytes-1))&(~(bytes-1)))
-#define NNLIB_OPT 0
 
 namespace impl {
 namespace HiFi {
@@ -190,8 +188,6 @@ void quantized_conv_out(
     bool channel_last,
     Tensor& out) {
   bool conv1d = input.dim() == 3;
-  
-#if NNLIB_OPT
     
   if(input.scalar_type() == ScalarType::Char)
   {
@@ -238,12 +234,11 @@ void quantized_conv_out(
     WORD32 inp_precision = 8;
     WORD32 kernel_precision = 8;
     pVOID p_scratch = nullptr;
-    WORD8 *ptr_scratch;
+    WORD32 *ptr_scratch;
     
     WORD32 scratch_size = 0;
     
     WORD32 out_data_format = 1;
-    WORD32 inp_data_format = 0;
     
     WORD8 *ptr1 = (WORD8 *)malloc(((input.size(0) * input_channels * input_height * input_width) + 8) * sizeof(WORD8));
     WORD8 *ptr2 = (WORD8 *)malloc(((out_channels * kernel_channels * kernel_height * kernel_width) + 8) * sizeof(WORD8));
@@ -323,7 +318,7 @@ void quantized_conv_out(
                                             
     scratch_size=scratch_size<0?0:scratch_size;
 
-    ptr_scratch = (WORD8 *)malloc(scratch_size + 16);
+    ptr_scratch = (WORD32 *)malloc(scratch_size + 16);
     
     p_scratch = (xa_codec_handle_t)ALIGN_PTR(ptr_scratch, 8);
     
@@ -364,9 +359,8 @@ void quantized_conv_out(
     free(ptr2);
     free(ptr_scratch);
   }
-  else if(input.scalar_type() == ScalarType::Byte)
+  else if(input.scalar_type() != ScalarType::Byte)
   {
-    printf("UINT8 CONV KERNEL");
     UWORD8* __restrict__ p_out = (UWORD8* __restrict__ )out.mutable_data_ptr<uint8_t>();
     UWORD8* __restrict__ p_inp = (UWORD8* __restrict__ )input.const_data_ptr<uint8_t>();
     UWORD8* __restrict__ p_kernel = (UWORD8* __restrict__ )weight.const_data_ptr<uint8_t>();
@@ -407,15 +401,14 @@ void quantized_conv_out(
     }
 
     WORD32 out_zero_bias = output_zero_point;
-    WORD32 inp_precision = 8;
-    WORD32 kernel_precision = 8;
+    WORD32 inp_precision = -3;
+    WORD32 kernel_precision = -3;
     pVOID p_scratch = nullptr;
-    WORD8 *ptr_scratch;
+    WORD32 *ptr_scratch;
     
     WORD32 scratch_size = 0;
     
     WORD32 out_data_format = 1;
-    WORD32 inp_data_format = 0;
 
     WORD8 *ptr1 = (WORD8 *)malloc(((input.size(0) * input_channels * input_height * input_width) + 8) * sizeof(WORD8));
     WORD8 *ptr2 = (WORD8 *)malloc(((out_channels * kernel_channels * kernel_height * kernel_width) + 8) * sizeof(WORD8));
@@ -426,7 +419,7 @@ void quantized_conv_out(
     WORD32 p_inp_shape[4];
     p_inp_shape[0] = input.size(0);
     p_inp_shape[1] = input_channels;
-    p_inp_shape[2] = input_channels;
+    p_inp_shape[2] = input_height;
     p_inp_shape[3] = input_width;
     
     WORD32 p_out_shape[4];
@@ -475,7 +468,7 @@ void quantized_conv_out(
                       ,p_inp_shape1
                       ,p_permute_vec1
                       ,num_out_dims1
-                      ,num_inp_dims1);      
+                      ,num_inp_dims1); 
     
     scratch_size = xa_nn_conv2d_getsize(
       input_height,
@@ -499,9 +492,9 @@ void quantized_conv_out(
                                             
     scratch_size=scratch_size<0?0:(scratch_size);
 
-    ptr_scratch = (WORD8 *)malloc(scratch_size + 16);
+    ptr_scratch = (WORD32 *)malloc(scratch_size);
     
-    p_scratch = (xa_codec_handle_t)ALIGN_PTR(ptr_scratch, 8);
+    p_scratch = (pVOID )ALIGN_PTR(ptr_scratch, 8);
     
     const UWORD8* __restrict__ p_inp1 = (const UWORD8* __restrict__ )pin;
     const UWORD8* __restrict__ p_kernel1 = (const UWORD8* __restrict__ )pkernel;
@@ -510,7 +503,7 @@ void quantized_conv_out(
       const UWORD8* __restrict__ in_batch = p_inp1 + _n * input_channels * input_height * input_width;
       UWORD8* __restrict__ out_batch = p_out + _n * out_channels * out_height * out_width;
       
-      WORD32 val = xa_nn_conv2d_per_chan_asym8xasym8
+      xa_nn_conv2d_per_chan_asym8xasym8
         (out_batch
         ,in_batch
         ,p_kernel1
@@ -544,97 +537,110 @@ void quantized_conv_out(
     free(ptr_scratch);
   }
   else
-  {
-    ET_CHECK_MSG(false, "Unhandled input dtype %hhd", out.scalar_type());
+  { 
+    // input = [n, c, h, w]
+    const int n = input.size(0);
+    const int c = input.size(1);
+    const int h = conv1d ? 1 : input.size(2);
+    const int w = conv1d ? input.size(2) : input.size(3);
+    // weight = [oc, wc, wh, ww]
+    const int oc = weight.size(0);
+    const int wc = weight.size(1);
+    const int wh = conv1d ? 1 : weight.size(2);
+    const int ww = conv1d ? weight.size(2) : weight.size(3);
+    // output = [n, oc, oh, ow]
+    const int oh = conv1d ? 1 : out.size(2);
+    const int ow = conv1d ? out.size(2) : out.size(3);
+    
+    // Bool flag to check if weight tensor is quantized per-tensor or
+    // per-channel
+    bool per_tensor_quantized = bias_scale.numel() == 1;
+    
+    if(input.scalar_type() == ScalarType::Char)
+    {
+        conv2d_nchw_core_generic<int8_t, int8_t, int32_t, int8_t, true>(
+            input.const_data_ptr<int8_t>(),
+            weight.const_data_ptr<int8_t>(),
+            bias.const_data_ptr<int32_t>(),
+            out.mutable_data_ptr<int8_t>(),
+            n,
+            c,
+            h,
+            w,
+            oc,
+            wc,
+            wh,
+            ww,
+            oh,
+            ow,
+            stride[0],
+            stride[1],
+            padding[0],
+            padding[1],
+            1,//dilation[0],
+            1,//dilation[1],
+            groups,
+            in_zero_point,
+            weight_zero_point.const_data_ptr<int32_t>(),
+            bias_scale.const_data_ptr<float>(),
+            output_scale,
+            (int8_t)output_zero_point,
+            per_tensor_quantized);
+        
+    }
+    else if(input.scalar_type() == ScalarType::Byte)
+    {
+        conv2d_nchw_core_generic<uint8_t, uint8_t, int32_t, uint8_t, true>(
+            input.const_data_ptr<uint8_t>(),
+            weight.const_data_ptr<uint8_t>(),
+            bias.const_data_ptr<int32_t>(),
+            out.mutable_data_ptr<uint8_t>(),
+            n,
+            c,
+            h,
+            w,
+            oc,
+            wc,
+            wh,
+            ww,
+            oh,
+            ow,
+            stride[0],
+            stride[1],
+            padding[0],
+            padding[1],
+            1,//dilation[0],
+            1,//dilation[1],
+            groups,
+            in_zero_point,
+            weight_zero_point.const_data_ptr<int32_t>(),
+            bias_scale.const_data_ptr<float>(),
+            output_scale,
+            (uint8_t)output_zero_point,
+            per_tensor_quantized);
+    }
+    else
+    {
+        ET_CHECK_MSG(false, "Unhandled input dtype %hhd", out.scalar_type());
+    }
   }
   
-#else  
-  // input = [n, c, h, w]
-  const int n = input.size(0);
+  /*const int n = input.size(0);
   const int c = input.size(1);
   const int h = conv1d ? 1 : input.size(2);
   const int w = conv1d ? input.size(2) : input.size(3);
   // weight = [oc, wc, wh, ww]
   const int oc = weight.size(0);
-  const int wc = weight.size(1);
-  const int wh = conv1d ? 1 : weight.size(2);
-  const int ww = conv1d ? weight.size(2) : weight.size(3);
   // output = [n, oc, oh, ow]
   const int oh = conv1d ? 1 : out.size(2);
   const int ow = conv1d ? out.size(2) : out.size(3);
+  
+  printf("Layer %d, %d, %d, %d\n", n, c, h, w);
+    
+  for(int i = 0; i < (oc * oh * ow); i++)
+      printf("%d\n", out.mutable_data_ptr<uint8_t>()[i]);
+  printf("\n\n");*/
 
-  // Bool flag to check if weight tensor is quantized per-tensor or
-  // per-channel
-  bool per_tensor_quantized = bias_scale.numel() == 1;
-
-  if(input.scalar_type() == ScalarType::Char)
-  {
-    conv2d_nchw_core_generic<int8_t, int8_t, int32_t, int8_t, true>(
-        input.const_data_ptr<int8_t>(),
-        weight.const_data_ptr<int8_t>(),
-        bias.const_data_ptr<int32_t>(),
-        out.mutable_data_ptr<int8_t>(),
-        n,
-        c,
-        h,
-        w,
-        oc,
-        wc,
-        wh,
-        ww,
-        oh,
-        ow,
-        stride[0],
-        stride[1],
-        padding[0],
-        padding[1],
-        1,//dilation[0],
-        1,//dilation[1],
-        groups,
-        in_zero_point,
-        weight_zero_point.const_data_ptr<int32_t>(),
-        bias_scale.const_data_ptr<float>(),
-        output_scale,
-        (int8_t)output_zero_point,
-        per_tensor_quantized);
-      
-  }
-  else if(input.scalar_type() == ScalarType::Byte)
-  {
-    conv2d_nchw_core_generic<uint8_t, uint8_t, int32_t, uint8_t, true>(
-        input.const_data_ptr<uint8_t>(),
-        weight.const_data_ptr<uint8_t>(),
-        bias.const_data_ptr<int32_t>(),
-        out.mutable_data_ptr<uint8_t>(),
-        n,
-        c,
-        h,
-        w,
-        oc,
-        wc,
-        wh,
-        ww,
-        oh,
-        ow,
-        stride[0],
-        stride[1],
-        padding[0],
-        padding[1],
-        1,//dilation[0],
-        1,//dilation[1],
-        groups,
-        in_zero_point,
-        weight_zero_point.const_data_ptr<int32_t>(),
-        bias_scale.const_data_ptr<float>(),
-        output_scale,
-        (uint8_t)output_zero_point,
-        per_tensor_quantized);
-  }
-  else
-  {
-    ET_CHECK_MSG(false, "Unhandled input dtype %hhd", out.scalar_type());
-  }
-#endif
 }
 
 }; // namespace native
