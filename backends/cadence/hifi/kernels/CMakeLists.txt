@@ -27,6 +27,7 @@ add_library(
   ${EXECUTORCH_ROOT}/backends/cadence/hifi/third-party/nnlib/xa_nn_elm_where_f32xf32_f32.c
   ${EXECUTORCH_ROOT}/backends/cadence/hifi/third-party/nnlib/xa_nn_activations_8_8.c
   ${EXECUTORCH_ROOT}/backends/cadence/hifi/third-party/nnlib/xa_nn_reduce_32_32.c
+  ${EXECUTORCH_ROOT}/backends/cadence/hifi/third-party/nnlib/xa_nn_conv2d_std_circ_buf.c
   ${EXECUTORCH_ROOT}/backends/cadence/hifi/third-party/nnlib/xa_nn_matXvec_asym8xasym8_asym8_circ.c
   ${EXECUTORCH_ROOT}/backends/cadence/hifi/third-party/nnlib/xa_nn_conv2d_asym8xasym8.c
 )
@@ -38,6 +39,7 @@ target_include_directories(
          ${EXECUTORCH_ROOT}/backends/cadence/hifi/third-party/nnlib/nnlib-hifi4/xa_nnlib/include/nnlib
          ${EXECUTORCH_ROOT}/backends/cadence/hifi/third-party/nnlib/nnlib-hifi4/xa_nnlib/include
          ${EXECUTORCH_ROOT}/backends/cadence/hifi/third-party/nnlib/nnlib-hifi4/xa_nnlib/algo/ndsp/hifi4/include/
+         ${EXECUTORCH_ROOT}/backends/cadence/hifi/third-party/nnlib/nnlib-hifi4/xa_nnlib/algo/kernels/cnn/hifi4/
 )
 
 target_link_libraries(cadence_kernels PRIVATE xa_nnlib)

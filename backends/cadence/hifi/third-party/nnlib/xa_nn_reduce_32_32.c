@@ -466,15 +466,16 @@ static inline void xa_nn_reduce_sum_4D_f32_f32(const FLOAT32 * __restrict__ p_in
   }
 }
 
-WORD32 xa_nn_reduce_mean_4D_f32_f32(FLOAT32 * __restrict__ p_out
-                                            ,const WORD32 *const p_out_shape
-                                            ,const FLOAT32 * __restrict__ p_inp
-                                            ,const WORD32 *const p_inp_shape
-                                            ,const WORD32 * __restrict__ p_axis
-                                            ,WORD32 num_out_dims
-                                            ,WORD32 num_inp_dims
-                                            ,WORD32 num_axis_dims
-                                            ,void * __restrict__ p_scratch_in)
+WORD32 xa_nn_reduce_mean_4D_f32_f32(
+                                    FLOAT32 * __restrict__ p_out,
+                                    const WORD32 *const p_out_shape,
+                                    const FLOAT32 * __restrict__ p_inp,
+                                    const WORD32 *const p_inp_shape,
+                                    const WORD32 * __restrict__ p_axis,
+                                    WORD32 num_out_dims,
+                                    WORD32 num_inp_dims,
+                                    WORD32 num_axis_dims,
+                                    void * __restrict__ p_scratch_in)
 {
   /* NULL pointer checks */
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);

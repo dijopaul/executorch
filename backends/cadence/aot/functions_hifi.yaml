@@ -281,11 +281,6 @@
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::gelu_out  
-      
-- op: mean.out
-  kernels:
-    - arg_meta: null
-      kernel_name: torch::executor::mean_dim_out       
 
 # custom ops
 - func: cadence::quantize_per_tensor.out(Tensor input, float scale, int zero_point, int quant_min, int quant_max, ScalarType dtype, *, Tensor(a!) out) -> Tensor(a!)

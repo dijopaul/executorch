@@ -363,21 +363,6 @@ WORD32 xa_nn_conv2d_per_chan_asym8xasym8(
   WORD32 x_padding_var = x_pad;
   WORD32 kernel_channels_pad;
 
-#if !ENABLE_PADDING_CONV2D_STD
-  kernel_channels_pad = kernel_channels;
-#else
-#if HW_AE_ADDCIRC16X4_XC
-  if(kernel_channels == 1)
-  {
-    kernel_channels_pad = 1;
-  }
-  else
-#endif
-  {
-    kernel_channels_pad = PADDED_SIZE(kernel_channels, (ALIGNMENT >> 1));
-  }
-#endif
-
   kernel_channels_pad = PADDED_SIZE(kernel_channels, (ALIGNMENT >> 1));
 
   /* When kernel convolves over x-left pad region only */
@@ -457,7 +442,6 @@ WORD32 xa_nn_conv2d_per_chan_asym8xasym8(
         p_bias_grp = p_bias+grp_i*kernels_per_group;
       }
 
-#if 0
       xa_nn_matXvec_asym8xasym8_asym8_circ
         (tmp_out /* output */
         ,p_state->cir_buf.p_curr/* matrix: rows x cols */
@@ -476,25 +460,7 @@ WORD32 xa_nn_conv2d_per_chan_asym8xasym8(
         ,p_out_shift[0]
         ,out_zero_bias
         );
-#else
-      xa_nn_matXvec_asym8xasym8_asym8_circ_new(
-        tmp_out /* output */
-        ,p_state->cir_buf.p_curr/* matrix: rows x cols */
-        ,(p_state->p_kernel_padded+grp_i*kernels_per_group*kernel_channels_pad*ker_w*ker_h) /* vec: cols */
-        ,p_bias_grp/* bias */
-        ,out_h /* rows */
-        ,kernel_channels_pad * ker_w * ker_h /* cols */
-        ,kernel_channels_pad * ker_w * y_str/* row_offset */
-        ,kernels_per_group /* vec_count */
-        ,kernel_channels_pad * ker_w * ker_h /* vec_stride */
-        ,out_channels_offset /* out_col_offset */
-        ,out_height_offset /* out_row_offset */
-        ,input_zero_bias
-        ,p_out_multiplier
-        ,p_out_shift
-        ,out_zero_bias
-        );
-#endif
+
       tmp_out += out_width_offset;
     }
   }
