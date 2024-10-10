@@ -26,6 +26,7 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sigmoid.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sub.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_tanh.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_mean.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_bmm.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_cat.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_clone.cpp"
@@ -47,6 +48,7 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/matmul_ops_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/reduce_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/repeat_util.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/slice_util.cpp"
     )
 add_library(aten_ops_cadence ${_aten_ops__srcs})
 target_link_libraries(aten_ops_cadence PUBLIC executorch)
