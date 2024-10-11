@@ -27,7 +27,6 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sigmoid.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sub.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_tanh.cpp"
-    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_mean.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_where.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_bmm.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_cat.cpp"
