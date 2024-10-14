@@ -76,6 +76,11 @@
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::permute_copy_out
+      
+- op: rsqrt.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::rsqrt_out      
 
 - op: sigmoid.out
   kernels:
