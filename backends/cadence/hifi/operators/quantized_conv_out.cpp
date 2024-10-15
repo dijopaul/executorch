@@ -6,22 +6,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "kernels.h"
-
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include <algorithm>
 #include <cmath>
 
-#define ALIGN_PTR(x, bytes)     ((((unsigned)(x))+(bytes-1))&(~(bytes-1)))
+#include <executorch/backends/cadence/hifi/kernels/kernels.h>
 
-namespace impl {
-namespace HiFi {
-namespace native {
+#define ALIGN_PTR(x, bytes)     ((((unsigned)(x))+(bytes-1))&(~(bytes-1)))
 
 using Tensor = exec_aten::Tensor;
 using RuntimeContext = torch::executor::RuntimeContext;
 using ScalarType = exec_aten::ScalarType;
 
+namespace impl {
+namespace HiFi {
+namespace native {
 
 // This implements a generic 2d conv kernel that operates on raw pointers.
 // The version handles both quantized and fp32 convolutions.
@@ -188,353 +187,357 @@ void quantized_conv_out(
     bool channel_last,
     Tensor& out) {
   bool conv1d = input.dim() == 3;
+  
+  bool optimized = 1;
+  
+  if((input.scalar_type() != ScalarType::Char) || (input.scalar_type() != ScalarType::Byte))
+    optimized = 0;
     
-  if(input.scalar_type() == ScalarType::Char)
+  if(optimized)
   {
-    WORD8* __restrict__ p_out = (WORD8* __restrict__ )out.mutable_data_ptr<int8_t>();
-    WORD8* __restrict__ p_inp = (WORD8* __restrict__ )input.const_data_ptr<int8_t>();
-    WORD8* __restrict__ p_kernel = (WORD8* __restrict__ )weight.const_data_ptr<int8_t>();
-    WORD32* __restrict__ p_bias = (WORD32* __restrict__ )bias.const_data_ptr<int32_t>();
-    
-    WORD32 input_height = conv1d ? 1 : input.size(2);
-    WORD32 input_width = conv1d ? input.size(2) : input.size(3);
-    WORD32 input_channels = input.size(1);
-    WORD32 kernel_height = conv1d ? 1 : weight.size(2);
-    WORD32 kernel_width = conv1d ? weight.size(2) : weight.size(3);
-    WORD32 kernel_channels = weight.size(1);
-    WORD32 out_channels = weight.size(0);
-    WORD32 out_height = conv1d ? 1 : out.size(2);
-    WORD32 out_width = conv1d ? out.size(2) : out.size(3);
-    WORD32 batches = input.size(0);
-    
-    WORD32 x_stride = stride[1];
-    WORD32 y_stride = stride[0];
-    WORD32 x_padding = padding[1];
-    WORD32 y_padding = padding[0];
-    WORD32 dilation_width = 1;
-    WORD32 dilation_height = 1;
-    
-    WORD32 * kernel_bias_ptr = (WORD32 *)weight_zero_point.const_data_ptr<int32_t>();
-    
-    WORD32 input_zero_bias = -in_zero_point;
-    WORD32 kernel_zero_bias = -kernel_bias_ptr[0];
-
-    WORD32 out_multiplier32[out_channels];
-    WORD32 out_shift32[out_channels];
-    
-    float out_scale = 1. / output_scale;
-
-    for(int i = 0; i < out_channels; i++)
+    constexpr int kNnlibMaxDim = 4;
+     
+    if(input.scalar_type() == ScalarType::Char)
     {
-        out_multiplier32[i] = bias_scale.const_data_ptr<float>()[0] * out_scale * 2147483648;
-        out_shift32[i] = 0;
+        WORD8* __restrict__ p_out = (WORD8* __restrict__ )out.mutable_data_ptr<int8_t>();
+        WORD8* __restrict__ p_inp = (WORD8* __restrict__ )input.const_data_ptr<int8_t>();
+        WORD8* __restrict__ p_kernel = (WORD8* __restrict__ )weight.const_data_ptr<int8_t>();
+        WORD32* __restrict__ p_bias = (WORD32* __restrict__ )bias.const_data_ptr<int32_t>();
+        
+        WORD32 input_height = conv1d ? 1 : input.size(2);
+        WORD32 input_width = conv1d ? input.size(2) : input.size(3);
+        WORD32 input_channels = input.size(1);
+        WORD32 kernel_height = conv1d ? 1 : weight.size(2);
+        WORD32 kernel_width = conv1d ? weight.size(2) : weight.size(3);
+        WORD32 kernel_channels = weight.size(1);
+        WORD32 out_channels = weight.size(0);
+        WORD32 out_height = conv1d ? 1 : out.size(2);
+        WORD32 out_width = conv1d ? out.size(2) : out.size(3);
+        WORD32 batches = input.size(0);
+        
+        WORD32 x_stride = stride[1];
+        WORD32 y_stride = stride[0];
+        WORD32 x_padding = padding[1];
+        WORD32 y_padding = padding[0];
+        WORD32 dilation_width = 1;
+        WORD32 dilation_height = 1;
+        
+        WORD32 * kernel_bias_ptr = (WORD32 *)weight_zero_point.const_data_ptr<int32_t>();
+        
+        WORD32 input_zero_bias = -in_zero_point;
+        WORD32 kernel_zero_bias = -kernel_bias_ptr[0];
+    
+        WORD32 out_multiplier32[out_channels];
+        WORD32 out_shift32[out_channels];
+        
+        float out_scale = 1. / output_scale;
+    
+        for(int i = 0; i < out_channels; i++)
+        {
+            out_multiplier32[i] = bias_scale.const_data_ptr<float>()[0] * out_scale * 2147483648;
+            out_shift32[i] = 0;
+        }
+    
+        WORD32 out_zero_bias = output_zero_point;
+        WORD32 inp_precision = 8;
+        WORD32 kernel_precision = 8;
+        pVOID p_scratch = nullptr;
+        WORD32 *ptr_scratch;
+        
+        WORD32 scratch_size = 0;
+        
+        WORD32 out_data_format = 1;
+        
+        WORD8 *ptr1 = (WORD8 *)malloc(((input.size(0) * input_channels * input_height * input_width) + 8) * sizeof(WORD8));
+        WORD8 *ptr2 = (WORD8 *)malloc(((out_channels * kernel_channels * kernel_height * kernel_width) + 8) * sizeof(WORD8));
+        
+        WORD8 *pin = (WORD8 *)ALIGN_PTR(ptr1, 8);
+        WORD8 *pkernel = (WORD8 *)ALIGN_PTR(ptr2, 8);
+        
+        WORD32 p_inp_shape[kNnlibMaxDim];
+        p_inp_shape[0] = input.size(0);
+        p_inp_shape[1] = input_channels;
+        p_inp_shape[2] = input_height;
+        p_inp_shape[3] = input_width;
+        
+        WORD32 p_out_shape[kNnlibMaxDim];
+        p_out_shape[0] = input.size(0);
+        p_out_shape[1] = input_height;
+        p_out_shape[2] = input_width;
+        p_out_shape[3] = input_channels;
+        
+        WORD32 p_permute_vec[kNnlibMaxDim] = {0, 2, 3, 1};
+        
+        WORD32 num_out_dims = kNnlibMaxDim;
+        WORD32 num_inp_dims = kNnlibMaxDim;
+        
+        WORD32 t = xa_nn_transpose_8_8(pin,
+                            p_out_shape,
+                            p_inp,
+                            p_inp_shape,
+                            p_permute_vec,
+                            num_out_dims,
+                            num_inp_dims);
+                        
+        WORD32 p_inp_shape1[kNnlibMaxDim];
+        p_inp_shape1[0] = out_channels;
+        p_inp_shape1[1] = kernel_channels;
+        p_inp_shape1[2] = kernel_height;
+        p_inp_shape1[3] = kernel_width;
+        
+        WORD32 p_out_shape1[kNnlibMaxDim];
+        p_out_shape1[0] = out_channels;
+        p_out_shape1[1] = kernel_height;
+        p_out_shape1[2] = kernel_width;
+        p_out_shape1[3] = kernel_channels;
+        
+        WORD32 p_permute_vec1[kNnlibMaxDim] = {0, 2, 3, 1};
+        
+        WORD32 num_out_dims1 = kNnlibMaxDim;
+        WORD32 num_inp_dims1 = kNnlibMaxDim;
+        
+        WORD32 t1 = xa_nn_transpose_8_8(pkernel,
+                            p_out_shape1,
+                            p_kernel,
+                            p_inp_shape1,
+                            p_permute_vec1,
+                            num_out_dims1,
+                            num_inp_dims1);   
+        
+        scratch_size = xa_nn_conv2d_getsize(input_height,
+                            input_width,
+                            input_channels,
+                            kernel_height,
+                            kernel_width,
+                            kernel_channels,
+                            dilation_height,
+                            dilation_width,
+                            y_stride,
+                            y_padding,
+                            x_stride,
+                            x_padding,
+                            out_height,
+                            out_width,
+                            out_channels,
+                            inp_precision,
+                            kernel_precision,
+                            out_data_format);
+                                                
+        scratch_size=scratch_size<0?0:scratch_size;
+    
+        ptr_scratch = (WORD32 *)malloc(scratch_size);
+        
+        p_scratch = (xa_codec_handle_t)ALIGN_PTR(ptr_scratch, 8);
+        
+        for (int _n = 0; _n < batches; ++_n) {
+            WORD8 *in_batch = pin + _n * input_channels * input_height * input_width;
+            WORD8 *out_batch = p_out + _n * out_channels * out_height * out_width;
+            
+            WORD32 val = xa_nn_conv2d_per_chan_sym8sxasym8s(out_batch,
+                            in_batch,
+                            pkernel,
+                            p_bias,
+                            input_height,
+                            input_width,
+                            input_channels,
+                            kernel_height,
+                            kernel_width,
+                            kernel_channels,
+                            dilation_height,
+                            dilation_width,
+                            out_channels,
+                            x_stride,
+                            y_stride,
+                            x_padding,
+                            y_padding,
+                            out_height,
+                            out_width,
+                            input_zero_bias,
+                            out_multiplier32,
+                            out_shift32,
+                            out_zero_bias,
+                            out_data_format,
+                            p_scratch);
+        }
+        
+        free(ptr1);
+        free(ptr2);
+        free(ptr_scratch);
     }
-
-    WORD32 out_zero_bias = output_zero_point;
-    WORD32 inp_precision = 8;
-    WORD32 kernel_precision = 8;
-    pVOID p_scratch = nullptr;
-    WORD32 *ptr_scratch;
-    
-    WORD32 scratch_size = 0;
-    
-    WORD32 out_data_format = 1;
-    
-    WORD8 *ptr1 = (WORD8 *)malloc(((input.size(0) * input_channels * input_height * input_width) + 8) * sizeof(WORD8));
-    WORD8 *ptr2 = (WORD8 *)malloc(((out_channels * kernel_channels * kernel_height * kernel_width) + 8) * sizeof(WORD8));
-    
-    WORD8 *pin = (WORD8 *)ALIGN_PTR(ptr1, 8);
-    WORD8 *pkernel = (WORD8 *)ALIGN_PTR(ptr2, 8);
-    
-    WORD32 p_inp_shape[4];
-    p_inp_shape[0] = input.size(0);
-    p_inp_shape[1] = input_channels;
-    p_inp_shape[2] = input_height;
-    p_inp_shape[3] = input_width;
-    
-    WORD32 p_out_shape[4];
-    p_out_shape[0] = input.size(0);
-    p_out_shape[1] = input_height;
-    p_out_shape[2] = input_width;
-    p_out_shape[3] = input_channels;
-    
-    WORD32 p_permute_vec[4] = {0, 2, 3, 1};
-    
-    WORD32 num_out_dims = 4;
-    WORD32 num_inp_dims = 4;
-    
-    WORD32 t = xa_nn_transpose_8_8(pin
-                      ,p_out_shape
-                      ,p_inp
-                      ,p_inp_shape
-                      ,p_permute_vec
-                      ,num_out_dims
-                      ,num_inp_dims);
-                      
-    WORD32 p_inp_shape1[4];
-    p_inp_shape1[0] = out_channels;
-    p_inp_shape1[1] = kernel_channels;
-    p_inp_shape1[2] = kernel_height;
-    p_inp_shape1[3] = kernel_width;
-    
-    WORD32 p_out_shape1[4];
-    p_out_shape1[0] = out_channels;
-    p_out_shape1[1] = kernel_height;
-    p_out_shape1[2] = kernel_width;
-    p_out_shape1[3] = kernel_channels;
-    
-    WORD32 p_permute_vec1[4] = {0, 2, 3, 1};
-    
-    WORD32 num_out_dims1 = 4;
-    WORD32 num_inp_dims1 = 4;
-    
-    WORD32 t1 = xa_nn_transpose_8_8(pkernel
-                      ,p_out_shape1
-                      ,p_kernel
-                      ,p_inp_shape1
-                      ,p_permute_vec1
-                      ,num_out_dims1
-                      ,num_inp_dims1);   
-    
-    scratch_size = xa_nn_conv2d_getsize(
-      input_height,
-      input_width,
-      input_channels,
-      kernel_height,
-      kernel_width,
-      kernel_channels,
-      dilation_height,
-      dilation_width,
-      y_stride,
-      y_padding,
-      x_stride,
-      x_padding,
-      out_height,
-      out_width,
-      out_channels,
-      inp_precision,
-      kernel_precision,
-      out_data_format);
-                                            
-    scratch_size=scratch_size<0?0:scratch_size;
-
-    ptr_scratch = (WORD32 *)malloc(scratch_size + 16);
-    
-    p_scratch = (xa_codec_handle_t)ALIGN_PTR(ptr_scratch, 8);
-    
-    for (int _n = 0; _n < batches; ++_n) {
-      WORD8 *in_batch = pin + _n * input_channels * input_height * input_width;
-      WORD8 *out_batch = p_out + _n * out_channels * out_height * out_width;
-    
-      WORD32 val = xa_nn_conv2d_per_chan_sym8sxasym8s
-        (out_batch
-        ,in_batch
-        ,pkernel
-        ,p_bias
-        ,input_height
-        ,input_width
-        ,input_channels
-        ,kernel_height
-        ,kernel_width
-        ,kernel_channels
-        ,dilation_height
-        ,dilation_width
-        ,out_channels
-        ,x_stride
-        ,y_stride
-        ,x_padding
-        ,y_padding
-        ,out_height
-        ,out_width
-        ,input_zero_bias
-        ,out_multiplier32
-        ,out_shift32
-        ,out_zero_bias
-        ,out_data_format
-        ,p_scratch
-      );
-    }
-    
-    free(ptr1);
-    free(ptr2);
-    free(ptr_scratch);
-  }
-  else if(input.scalar_type() == ScalarType::Byte)
-  {
-    UWORD8* __restrict__ p_out = (UWORD8* __restrict__ )out.mutable_data_ptr<uint8_t>();
-    UWORD8* __restrict__ p_inp = (UWORD8* __restrict__ )input.const_data_ptr<uint8_t>();
-    UWORD8* __restrict__ p_kernel = (UWORD8* __restrict__ )weight.const_data_ptr<uint8_t>();
-    WORD32* __restrict__ p_bias = (WORD32* __restrict__ )bias.const_data_ptr<int32_t>();
-    
-    WORD32 input_height = conv1d ? 1 : input.size(2);
-    WORD32 input_width = conv1d ? input.size(2) : input.size(3);
-    WORD32 input_channels = input.size(1);
-    WORD32 kernel_height = conv1d ? 1 : weight.size(2);
-    WORD32 kernel_width = conv1d ? weight.size(2) : weight.size(3);
-    WORD32 kernel_channels = weight.size(1);
-    WORD32 out_channels = weight.size(0);
-    WORD32 out_height = conv1d ? 1 : out.size(2);
-    WORD32 out_width = conv1d ? out.size(2) : out.size(3);
-    WORD32 batches = input.size(0);
-    
-    WORD32 x_stride = stride[1];
-    WORD32 y_stride = stride[0];
-    WORD32 x_padding = padding[1];
-    WORD32 y_padding = padding[0];
-    WORD32 dilation_width = 1;
-    WORD32 dilation_height = 1;
-    
-    WORD32 * kernel_bias_ptr = (WORD32 *)weight_zero_point.const_data_ptr<int32_t>();
-    
-    WORD32 input_zero_bias = -in_zero_point;
-    WORD32 kernel_zero_bias = -kernel_bias_ptr[0];
-
-    WORD32 out_multiplier32[out_channels];
-    WORD32 out_shift32[out_channels];
-    
-    float out_scale = 1. / output_scale;
-
-    for(int i = 0; i < out_channels; i++)
+    else if(input.scalar_type() == ScalarType::Byte)
     {
-        out_multiplier32[i] = bias_scale.const_data_ptr<float>()[0] * out_scale * 2147483648;
-        out_shift32[i] = 0;
+        UWORD8* __restrict__ p_out = (UWORD8* __restrict__ )out.mutable_data_ptr<uint8_t>();
+        UWORD8* __restrict__ p_inp = (UWORD8* __restrict__ )input.const_data_ptr<uint8_t>();
+        UWORD8* __restrict__ p_kernel = (UWORD8* __restrict__ )weight.const_data_ptr<uint8_t>();
+        WORD32* __restrict__ p_bias = (WORD32* __restrict__ )bias.const_data_ptr<int32_t>();
+        
+        WORD32 input_height = conv1d ? 1 : input.size(2);
+        WORD32 input_width = conv1d ? input.size(2) : input.size(3);
+        WORD32 input_channels = input.size(1);
+        WORD32 kernel_height = conv1d ? 1 : weight.size(2);
+        WORD32 kernel_width = conv1d ? weight.size(2) : weight.size(3);
+        WORD32 kernel_channels = weight.size(1);
+        WORD32 out_channels = weight.size(0);
+        WORD32 out_height = conv1d ? 1 : out.size(2);
+        WORD32 out_width = conv1d ? out.size(2) : out.size(3);
+        WORD32 batches = input.size(0);
+        
+        WORD32 x_stride = stride[1];
+        WORD32 y_stride = stride[0];
+        WORD32 x_padding = padding[1];
+        WORD32 y_padding = padding[0];
+        WORD32 dilation_width = 1;
+        WORD32 dilation_height = 1;
+        
+        WORD32 * kernel_bias_ptr = (WORD32 *)weight_zero_point.const_data_ptr<int32_t>();
+        
+        WORD32 input_zero_bias = -in_zero_point;
+        WORD32 kernel_zero_bias = -kernel_bias_ptr[0];
+    
+        WORD32 out_multiplier32[out_channels];
+        WORD32 out_shift32[out_channels];
+        
+        float out_scale = 1. / output_scale;
+    
+        for(int i = 0; i < out_channels; i++)
+        {
+            out_multiplier32[i] = bias_scale.const_data_ptr<float>()[0] * out_scale * 2147483648;
+            out_shift32[i] = 0;
+        }
+    
+        WORD32 out_zero_bias = output_zero_point;
+        WORD32 inp_precision = -3;
+        WORD32 kernel_precision = -3;
+        pVOID p_scratch = nullptr;
+        WORD32 *ptr_scratch;
+        
+        WORD32 scratch_size = 0;
+        
+        WORD32 out_data_format = 1;
+    
+        WORD8 *ptr1 = (WORD8 *)malloc(((input.size(0) * input_channels * input_height * input_width) + 8) * sizeof(WORD8));
+        WORD8 *ptr2 = (WORD8 *)malloc(((out_channels * kernel_channels * kernel_height * kernel_width) + 8) * sizeof(WORD8));
+        
+        WORD8 *pin = (WORD8 *)ALIGN_PTR(ptr1, 8);
+        WORD8 *pkernel = (WORD8 *)ALIGN_PTR(ptr2, 8);
+        
+        WORD32 p_inp_shape[kNnlibMaxDim];
+        p_inp_shape[0] = input.size(0);
+        p_inp_shape[1] = input_channels;
+        p_inp_shape[2] = input_height;
+        p_inp_shape[3] = input_width;
+        
+        WORD32 p_out_shape[kNnlibMaxDim];
+        p_out_shape[0] = input.size(0);
+        p_out_shape[1] = input_height;
+        p_out_shape[2] = input_width;
+        p_out_shape[3] = input_channels;
+        
+        WORD32 p_permute_vec[kNnlibMaxDim] = {0, 2, 3, 1};
+        
+        WORD32 num_out_dims = kNnlibMaxDim;
+        WORD32 num_inp_dims = kNnlibMaxDim;
+        
+        WORD8 * p_tmp = (WORD8 *)p_inp;
+        
+        WORD32 t = xa_nn_transpose_8_8(pin,
+                            p_out_shape,
+                            p_tmp,
+                            p_inp_shape,
+                            p_permute_vec,
+                            num_out_dims,
+                            num_inp_dims);
+                        
+        WORD32 p_inp_shape1[kNnlibMaxDim];
+        p_inp_shape1[0] = out_channels;
+        p_inp_shape1[1] = kernel_channels;
+        p_inp_shape1[2] = kernel_height;
+        p_inp_shape1[3] = kernel_width;
+        
+        WORD32 p_out_shape1[kNnlibMaxDim];
+        p_out_shape1[0] = out_channels;
+        p_out_shape1[1] = kernel_height;
+        p_out_shape1[2] = kernel_width;
+        p_out_shape1[3] = kernel_channels;
+        
+        WORD32 p_permute_vec1[kNnlibMaxDim] = {0, 2, 3, 1};
+        
+        WORD32 num_out_dims1 = kNnlibMaxDim;
+        WORD32 num_inp_dims1 = kNnlibMaxDim;
+        
+        WORD8 * p_tmp1 = (WORD8 *)p_kernel;
+        
+        WORD32 t1 = xa_nn_transpose_8_8(pkernel,
+                            p_out_shape1,
+                            p_tmp1,
+                            p_inp_shape1,
+                            p_permute_vec1,
+                            num_out_dims1,
+                            num_inp_dims1); 
+        
+        scratch_size = xa_nn_conv2d_getsize(input_height,
+                            input_width,
+                            input_channels,
+                            kernel_height,
+                            kernel_width,
+                            kernel_channels,
+                            dilation_height,
+                            dilation_width,
+                            y_stride,
+                            y_padding,
+                            x_stride,
+                            x_padding,
+                            out_height,
+                            out_width,
+                            out_channels,
+                            inp_precision,
+                            kernel_precision,
+                            out_data_format);
+                                                
+        scratch_size=scratch_size<0?0:(scratch_size);
+    
+        ptr_scratch = (WORD32 *)malloc(scratch_size);
+        
+        p_scratch = (pVOID )ALIGN_PTR(ptr_scratch, 8);
+        
+        const UWORD8* __restrict__ p_inp1 = (const UWORD8* __restrict__ )pin;
+        const UWORD8* __restrict__ p_kernel1 = (const UWORD8* __restrict__ )pkernel;
+    
+        for (int _n = 0; _n < batches; _n++) {
+            const UWORD8* __restrict__ in_batch = p_inp1 + _n * input_channels * input_height * input_width;
+            UWORD8* __restrict__ out_batch = p_out + _n * out_channels * out_height * out_width;
+            
+            xa_nn_conv2d_per_chan_asym8xasym8(out_batch,
+                            in_batch,
+                            p_kernel1,
+                            p_bias,
+                            input_height,
+                            input_width,
+                            input_channels,
+                            kernel_height,
+                            kernel_width,
+                            kernel_channels,
+                            dilation_height,
+                            dilation_width,
+                            out_channels,
+                            x_stride,
+                            y_stride,
+                            x_padding,
+                            y_padding,
+                            out_height,
+                            out_width,
+                            input_zero_bias,
+                            out_multiplier32,
+                            out_shift32,
+                            out_zero_bias,
+                            out_data_format,
+                            p_scratch);
+        }
+        
+        free(ptr1);
+        free(ptr2);
+        free(ptr_scratch);
     }
-
-    WORD32 out_zero_bias = output_zero_point;
-    WORD32 inp_precision = -3;
-    WORD32 kernel_precision = -3;
-    pVOID p_scratch = nullptr;
-    WORD32 *ptr_scratch;
-    
-    WORD32 scratch_size = 0;
-    
-    WORD32 out_data_format = 1;
-
-    WORD8 *ptr1 = (WORD8 *)malloc(((input.size(0) * input_channels * input_height * input_width) + 8) * sizeof(WORD8));
-    WORD8 *ptr2 = (WORD8 *)malloc(((out_channels * kernel_channels * kernel_height * kernel_width) + 8) * sizeof(WORD8));
-    
-    WORD8 *pin = (WORD8 *)ALIGN_PTR(ptr1, 8);
-    WORD8 *pkernel = (WORD8 *)ALIGN_PTR(ptr2, 8);
-    
-    WORD32 p_inp_shape[4];
-    p_inp_shape[0] = input.size(0);
-    p_inp_shape[1] = input_channels;
-    p_inp_shape[2] = input_height;
-    p_inp_shape[3] = input_width;
-    
-    WORD32 p_out_shape[4];
-    p_out_shape[0] = input.size(0);
-    p_out_shape[1] = input_height;
-    p_out_shape[2] = input_width;
-    p_out_shape[3] = input_channels;
-    
-    WORD32 p_permute_vec[4] = {0, 2, 3, 1};
-    
-    WORD32 num_out_dims = 4;
-    WORD32 num_inp_dims = 4;
-    
-    WORD8 * p_tmp = (WORD8 *)p_inp;
-    
-    WORD32 t = xa_nn_transpose_8_8(pin
-                      ,p_out_shape
-                      ,p_tmp
-                      ,p_inp_shape
-                      ,p_permute_vec
-                      ,num_out_dims
-                      ,num_inp_dims);
-                      
-    WORD32 p_inp_shape1[4];
-    p_inp_shape1[0] = out_channels;
-    p_inp_shape1[1] = kernel_channels;
-    p_inp_shape1[2] = kernel_height;
-    p_inp_shape1[3] = kernel_width;
-    
-    WORD32 p_out_shape1[4];
-    p_out_shape1[0] = out_channels;
-    p_out_shape1[1] = kernel_height;
-    p_out_shape1[2] = kernel_width;
-    p_out_shape1[3] = kernel_channels;
-    
-    WORD32 p_permute_vec1[4] = {0, 2, 3, 1};
-    
-    WORD32 num_out_dims1 = 4;
-    WORD32 num_inp_dims1 = 4;
-    
-    WORD8 * p_tmp1 = (WORD8 *)p_kernel;
-    
-    WORD32 t1 = xa_nn_transpose_8_8(pkernel
-                      ,p_out_shape1
-                      ,p_tmp1
-                      ,p_inp_shape1
-                      ,p_permute_vec1
-                      ,num_out_dims1
-                      ,num_inp_dims1); 
-    
-    scratch_size = xa_nn_conv2d_getsize(
-      input_height,
-      input_width,
-      input_channels,
-      kernel_height,
-      kernel_width,
-      kernel_channels,
-      dilation_height,
-      dilation_width,
-      y_stride,
-      y_padding,
-      x_stride,
-      x_padding,
-      out_height,
-      out_width,
-      out_channels,
-      inp_precision,
-      kernel_precision,
-      out_data_format);
-                                            
-    scratch_size=scratch_size<0?0:(scratch_size);
-
-    ptr_scratch = (WORD32 *)malloc(scratch_size);
-    
-    p_scratch = (pVOID )ALIGN_PTR(ptr_scratch, 8);
-    
-    const UWORD8* __restrict__ p_inp1 = (const UWORD8* __restrict__ )pin;
-    const UWORD8* __restrict__ p_kernel1 = (const UWORD8* __restrict__ )pkernel;
-
-    for (int _n = 0; _n < batches; _n++) {
-      const UWORD8* __restrict__ in_batch = p_inp1 + _n * input_channels * input_height * input_width;
-      UWORD8* __restrict__ out_batch = p_out + _n * out_channels * out_height * out_width;
-      
-      xa_nn_conv2d_per_chan_asym8xasym8
-        (out_batch
-        ,in_batch
-        ,p_kernel1
-        ,p_bias
-        ,input_height
-        ,input_width
-        ,input_channels
-        ,kernel_height
-        ,kernel_width
-        ,kernel_channels
-        ,dilation_height
-        ,dilation_width
-        ,out_channels
-        ,x_stride
-        ,y_stride
-        ,x_padding
-        ,y_padding
-        ,out_height
-        ,out_width
-        ,input_zero_bias
-        ,out_multiplier32
-        ,out_shift32
-        ,out_zero_bias
-        ,out_data_format
-        ,p_scratch
-      );
-    }
-    
-    free(ptr1);
-    free(ptr2);
-    free(ptr_scratch);
   }
   else
   { 
