@@ -35,7 +35,7 @@
 - op: cat.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::cat_out
+      kernel_name: impl::HiFi::cat_out
 
 - op: clone.out
   kernels:
