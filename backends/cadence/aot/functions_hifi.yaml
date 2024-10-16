@@ -75,7 +75,7 @@
 - op: permute_copy.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::permute_copy_out
+      kernel_name: impl::HiFi::permute_copy_out
 
 - op: sigmoid.out
   kernels:
