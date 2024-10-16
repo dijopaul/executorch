@@ -188,10 +188,12 @@ void quantized_conv_out(
     Tensor& out) {
   bool conv1d = input.dim() == 3;
   
-  bool optimized = 1;
+  bool optimized = 0;
   
-  if((input.scalar_type() != ScalarType::Char) || (input.scalar_type() != ScalarType::Byte))
-    optimized = 0;
+  if(input.scalar_type() == ScalarType::Char)
+    optimized = 1;
+  else if(input.scalar_type() == ScalarType::Byte)
+    optimized = 1;
     
   if(optimized)
   {
