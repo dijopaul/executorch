@@ -30,7 +30,7 @@
 - op: bmm.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::bmm_out
+      kernel_name: impl::HiFi::bmm_out
 
 - op: cat.out
   kernels:
