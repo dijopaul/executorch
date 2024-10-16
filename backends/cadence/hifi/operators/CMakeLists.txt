@@ -21,6 +21,7 @@ endif()
 # ATen compliant ops that are needed to run this model.
 set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_add.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bmm.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_div.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_mean.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_mul.cpp"
@@ -28,7 +29,6 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sub.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_tanh.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_where.cpp"
-    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_bmm.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_cat.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_clone.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_embedding.cpp"
