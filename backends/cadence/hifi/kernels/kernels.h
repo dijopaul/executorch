@@ -16,6 +16,12 @@
 #include "xa_nnlib_kernels_api.h"
 
 /* Potential NNLIB function/APIs */
+extern "C" WORD32 xa_nn_broadcast_32_32( WORD32* __restrict__ p_out,     
+                                const int *const out_shape,         
+                                WORD32* __restrict__ p_in,   
+                                const int * const in_shape, 
+                                int num_dims);
+                                
 extern "C" WORD32 xa_nn_elm_add_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
                                 const WORD32 *const p_out_shape,
                                 const FLOAT32 * __restrict__ p_inp1,
