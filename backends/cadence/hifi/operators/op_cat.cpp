@@ -6,14 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <executorch/kernels/portable/cpu/util/copy_ops_util.h>
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include <cstring>
-#include <executorch/kernels/portable/cpu/util/copy_ops_util.h>
 
 #include <executorch/backends/cadence/hifi/kernels/kernels.h>
 
-using exec_aten::Tensor;
 using exec_aten::ScalarType;
+using exec_aten::Tensor;
 using executorch::aten::RuntimeContext;
 using torch::executor::Error;
 
@@ -26,76 +26,74 @@ Tensor& cat_out(
     exec_aten::ArrayRef<Tensor> tensors,
     int64_t dim,
     Tensor& out) {
-    
   constexpr auto name = "cat.out";
   constexpr int kNnlibMaxDim = 16;
-      
+
   bool optimized = 1;
-  
-  if(out.scalar_type() != ScalarType::Float)
+
+  if (out.scalar_type() != ScalarType::Float)
     optimized = 0;
 
-  if(in.dim() > kNnlibMaxDim)
+  if (in.dim() > kNnlibMaxDim)
     optimized = 0;
-  
-  if(optimized){
+
+  if (optimized) {
     WORD32 num_inp = tensors.size();
     WORD32 num_inp_dims = out.dim();
     WORD32 num_out_dims = num_inp_dims;
     WORD32 axis = dim;
-    
+
     WORD32 inp_shape[kNnlibMaxDim][kNnlibMaxDim];
     WORD32 p_out_shape[kNnlibMaxDim];
-    
-    WORD32 *ptr_shape[kNnlibMaxDim];
-    const WORD32 *ptr[kNnlibMaxDim];
-    
+
+    WORD32* ptr_shape[kNnlibMaxDim];
+    const WORD32* ptr[kNnlibMaxDim];
+
     int k = 0;
-    for(int i = 0; i < num_inp; i++)
-    {
-      if(tensors[i].numel() == 0)
+    for (int i = 0; i < num_inp; i++) {
+      if (tensors[i].numel() == 0)
         continue;
-      ptr[k] = (const WORD32 *)tensors[i].const_data_ptr<float>();
-      for(int j = 0; j < num_inp_dims; j++)
-      {
-          inp_shape[k][j] = tensors[i].size(j);
+      ptr[k] = (const WORD32*)tensors[i].const_data_ptr<float>();
+      for (int j = 0; j < num_inp_dims; j++) {
+        inp_shape[k][j] = tensors[i].size(j);
       }
       ptr_shape[k] = inp_shape[k];
       k++;
     }
-    
+
     num_inp = k;
-    
-    for(int i = 0; i < num_out_dims; i++)
-    {
+
+    for (int i = 0; i < num_out_dims; i++) {
       p_out_shape[i] = out.size(i);
     }
-    
-    const WORD32 **pp_inps = &ptr[0];
-    
-    WORD32 * p_out = (WORD32 *)out.mutable_data_ptr<float>();
-    
-    const WORD32 *const *pp_inps_shape = (const WORD32 *const *)&ptr_shape[0];
-    
-    WORD32 val = xa_nn_concat_32_32(p_out
-                                  ,p_out_shape
-                                  ,pp_inps
-                                  ,pp_inps_shape
-                                  ,num_out_dims
-                                  ,num_inp
-                                  ,num_inp_dims
-                                  ,axis);   
-    
-    return out;    
+
+    const WORD32** pp_inps = &ptr[0];
+
+    WORD32* p_out = (WORD32*)out.mutable_data_ptr<float>();
+
+    const WORD32* const* pp_inps_shape = (const WORD32* const*)&ptr_shape[0];
+
+    WORD32 val = xa_nn_concat_32_32(
+        p_out,
+        p_out_shape,
+        pp_inps,
+        pp_inps_shape,
+        num_out_dims,
+        num_inp,
+        num_inp_dims,
+        axis);
+
+    return out;
   }
-  
+
   if (dim < 0) {
     dim += out.dim();
   }
 
   ET_KERNEL_CHECK(ctx, check_cat_args(tensors, dim, out), InvalidArgument, out);
 
-  Tensor::SizesType expected_out_size[executorch::runtime::kTensorDimensionLimit];
+  Tensor::SizesType
+      expected_out_size[executorch::runtime::kTensorDimensionLimit];
   size_t expected_out_dim = 0;
   get_cat_out_target_size(tensors, dim, expected_out_size, &expected_out_dim);
 
