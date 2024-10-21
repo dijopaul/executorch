@@ -26,6 +26,11 @@
   kernels:
     - arg_meta: null
       kernel_name: impl::HiFi::add_out
+      
+- op: atan2.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::atan2_out 
 
 - op: bmm.out
   kernels:
