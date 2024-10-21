@@ -6,16 +6,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <executorch/backends/cadence/hifi/kernels/kernels.h>
 #include <executorch/kernels/portable/cpu/util/matmul_ops_util.h>
 #include <executorch/kernels/portable/cpu/vec_ops.h>
 #include <executorch/runtime/kernel/kernel_includes.h>
-#include <executorch/backends/cadence/hifi/kernels/kernels.h>
 
 using Tensor = exec_aten::Tensor;
 using exec_aten::ScalarType;
-using torch::executor::Error;
 using executorch::runtime::KernelRuntimeContext;
 using executorch::runtime::kTensorDimensionLimit;
+using torch::executor::Error;
 
 namespace impl {
 namespace HiFi {
@@ -41,29 +41,28 @@ Tensor& bmm_out(
       resize_tensor(out, {output_sizes, output_ndim}) == Error::Ok,
       InvalidArgument,
       out);
-      
+
   constexpr auto name = "bmm.out";
   constexpr int kNnlibMaxDim = 3;
-  
+
   bool optimized = 1;
-  
-  if(out.scalar_type() != ScalarType::Float)
+
+  if (out.scalar_type() != ScalarType::Float)
     optimized = 0;
 
-  if(in.dim() > kNnlibMaxDim)
+  if (in.dim() > kNnlibMaxDim)
     optimized = 0;
 
-  if(optimized)
-  {
+  if (optimized) {
     const float* in_data = in.const_data_ptr<float>();
     const float* mat2_data = mat2.const_data_ptr<float>();
     float* out_data = out.mutable_data_ptr<float>();
-    
+
     int64_t batch_size = in.size(0);
     int64_t m = in.size(1);
     int64_t n = in.size(2);
     int64_t p = mat2.size(2);
-    
+
     WORD32 rows = m;
     WORD32 cols1 = n;
     WORD32 row_stride1 = n;
@@ -71,82 +70,83 @@ Tensor& bmm_out(
     WORD32 vec_offset = n;
     WORD32 out_offset = 1;
     WORD32 out_stride = p;
-    
-    float *tmp = (float*) calloc((batch_size * m * p), sizeof(float));
-    WORD32 *p_o = (WORD32 *) malloc((batch_size * m * p) * sizeof(float));
-    
+
+    float* tmp = (float*)calloc((batch_size * m * p), sizeof(float));
+    WORD32* p_o = (WORD32*)malloc((batch_size * m * p) * sizeof(float));
+
     for (int i = 0; i < batch_size; ++i) {
-      const FLOAT32 * __restrict__ p_mat1 = in_data + i * m * n;
-      const FLOAT32 * __restrict__ p_vec1 = mat2_data + i * n * p;
-      FLOAT32 * __restrict__ p_out = out_data + i * m * p;
-      const FLOAT32 * __restrict__ p_bias = (const FLOAT32 * __restrict__)tmp;
-      
-      WORD32 *p_inp = (WORD32 *)p_vec1;
-      
+      const FLOAT32* __restrict__ p_mat1 = in_data + i * m * n;
+      const FLOAT32* __restrict__ p_vec1 = mat2_data + i * n * p;
+      FLOAT32* __restrict__ p_out = out_data + i * m * p;
+      const FLOAT32* __restrict__ p_bias = (const FLOAT32* __restrict__)tmp;
+
+      WORD32* p_inp = (WORD32*)p_vec1;
+
       WORD32 p_inp_shape[kNnlibMaxDim];
       p_inp_shape[0] = n;
       p_inp_shape[1] = p;
       p_inp_shape[2] = 1;
-      
+
       WORD32 p_out_shape[kNnlibMaxDim];
       p_out_shape[0] = p;
       p_out_shape[1] = n;
       p_out_shape[2] = 1;
-      
+
       WORD32 p_permute_vec[kNnlibMaxDim] = {1, 0, 2};
-      
+
       WORD32 num_out_dims = kNnlibMaxDim;
       WORD32 num_inp_dims = kNnlibMaxDim;
-      
-      xa_nn_transpose_32_32(p_o,
-                        p_out_shape,
-                        p_inp,
-                        p_inp_shape,
-                        p_permute_vec,
-                        num_out_dims,
-                        num_inp_dims);
-                        
-      const FLOAT32 * __restrict__ p_vec = (const FLOAT32 * __restrict__)p_o;
-    
-      xa_nn_matmul_f32xf32_f32(p_out,     
-                        p_mat1,   
-                        p_vec,   
-                        p_bias,   
-                        rows,
-                        cols1,
-                        row_stride1,                    
-                        vec_count,                      
-                        vec_offset,
-                        out_offset,
-                        out_stride);
+
+      xa_nn_transpose_32_32(
+          p_o,
+          p_out_shape,
+          p_inp,
+          p_inp_shape,
+          p_permute_vec,
+          num_out_dims,
+          num_inp_dims);
+
+      const FLOAT32* __restrict__ p_vec = (const FLOAT32* __restrict__)p_o;
+
+      xa_nn_matmul_f32xf32_f32(
+          p_out,
+          p_mat1,
+          p_vec,
+          p_bias,
+          rows,
+          cols1,
+          row_stride1,
+          vec_count,
+          vec_offset,
+          out_offset,
+          out_stride);
     }
-      
+
     free(tmp);
     free(p_o);
-    
+
     return out;
   }
 
-  ET_SWITCH_REAL_TYPES_AND(
-      Half, in.scalar_type(), ctx, name, CTYPE, [&]() {
-        const CTYPE* in_data = in.const_data_ptr<CTYPE>();
-        const CTYPE* mat2_data = mat2.const_data_ptr<CTYPE>();
-        CTYPE* out_data = out.mutable_data_ptr<CTYPE>();
+  ET_SWITCH_REAL_TYPES_AND(Half, in.scalar_type(), ctx, name, CTYPE, [&]() {
+    const CTYPE* in_data = in.const_data_ptr<CTYPE>();
+    const CTYPE* mat2_data = mat2.const_data_ptr<CTYPE>();
+    CTYPE* out_data = out.mutable_data_ptr<CTYPE>();
 
-        int64_t batch_size = in.size(0);
-        int64_t m = in.size(1);
-        int64_t n = in.size(2);
-        int64_t p = mat2.size(2);
+    int64_t batch_size = in.size(0);
+    int64_t m = in.size(1);
+    int64_t n = in.size(2);
+    int64_t p = mat2.size(2);
 
-        for (int i = 0; i < batch_size; ++i) {
-          const CTYPE* in_data_offset = in_data + i * m * n;
-          const CTYPE* mat2_data_offset = mat2_data + i * n * p;
-          CTYPE* out_data_offset = out_data + i * m * p;
+    for (int i = 0; i < batch_size; ++i) {
+      const CTYPE* in_data_offset = in_data + i * m * n;
+      const CTYPE* mat2_data_offset = mat2_data + i * n * p;
+      CTYPE* out_data_offset = out_data + i * m * p;
 
-          torch::executor::vec_matmul<CTYPE>(
-              out_data_offset, in_data_offset, mat2_data_offset, m, n, p);
-        }
-      });
+      torch::executor::vec_matmul<CTYPE>(
+          out_data_offset, in_data_offset, mat2_data_offset, m, n, p);
+    }
+  });
 
   return out;
 }
