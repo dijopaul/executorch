@@ -6,19 +6,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <executorch/backends/cadence/hifi/kernels/kernels.h>
 #include <executorch/kernels/portable/cpu/scalar_utils.h>
 #include <executorch/kernels/portable/cpu/util/broadcast_util.h>
 #include <executorch/kernels/portable/cpu/util/math_util.h>
 #include <executorch/runtime/kernel/kernel_includes.h>
-#include <executorch/backends/cadence/hifi/kernels/kernels.h>
 
 using exec_aten::ScalarType;
 using exec_aten::Tensor;
+using executorch::aten::RuntimeContext;
 using executorch::runtime::can_cast;
 using executorch::runtime::CppTypeToScalarType;
-using torch::executor::Error;
-using executorch::aten::RuntimeContext;
 using torch::executor::apply_binary_elementwise_fn;
+using torch::executor::Error;
 
 namespace impl {
 namespace HiFi {
@@ -45,7 +45,8 @@ struct MinimumInner<true, CTYPE_A, CTYPE_B, CTYPE_IN, CTYPE_OUT> {
         [](const CTYPE_A val_a, const CTYPE_B val_b) {
           CTYPE_IN a_casted = static_cast<CTYPE_IN>(val_a);
           CTYPE_IN b_casted = static_cast<CTYPE_IN>(val_b);
-          CTYPE_IN value = torch::executor::native::utils::min_override(a_casted, b_casted);
+          CTYPE_IN value =
+              torch::executor::native::utils::min_override(a_casted, b_casted);
 
           return static_cast<CTYPE_OUT>(value);
         },
@@ -85,7 +86,7 @@ Tensor& minimum_out(
       out);
 
   constexpr int kNnlibMaxDim = 4; /*fallback if broadcast and dim > 4 */
-  
+
   ScalarType a_type = a.scalar_type();
   ScalarType b_type = b.scalar_type();
   ScalarType common_type = promoteTypes(a_type, b_type, /*half_to_float*/ true);
@@ -94,60 +95,55 @@ Tensor& minimum_out(
   ET_KERNEL_CHECK(ctx, canCast(common_type, out_type), InvalidArgument, out);
 
   bool optimized = 1;
-  /*find broadcast*/  
+  /*find broadcast*/
   const bool a_is_broadcasted = !out.sizes().equals(a.sizes());
   const bool b_is_broadcasted = !out.sizes().equals(b.sizes());
   const bool broadcast = (a_is_broadcasted || b_is_broadcasted);
-  
+
   int max_dim = a.dim() > b.dim() ? a.dim() : b.dim();
   max_dim = out.dim() > max_dim ? out.dim() : max_dim;
 
-  if((a_type != ScalarType::Float) || (b_type != ScalarType::Float))
-      optimized = 0;
-  if((broadcast == 1) && (max_dim > kNnlibMaxDim))
-      optimized = 0;
+  if ((a_type != ScalarType::Float) || (b_type != ScalarType::Float))
+    optimized = 0;
+  if ((broadcast == 1) && (max_dim > kNnlibMaxDim))
+    optimized = 0;
 
-  if(optimized)
-  {
+  if (optimized) {
     float* a_data = a.mutable_data_ptr<float>();
     float* b_data = b.mutable_data_ptr<float>();
     float* out_data = out.mutable_data_ptr<float>();
 
-    if(broadcast == 1)
-    {
-       int out_shape[kNnlibMaxDim];
-       int inp1_shape[kNnlibMaxDim];
-       int inp2_shape[kNnlibMaxDim];
-         
-       for(int i = 0; i < kNnlibMaxDim; i++)
-       {
-          out_shape[i] = 1;
-          inp1_shape[i] = 1;
-          inp2_shape[i] = 1;
-       }
-         
-       int off_o = kNnlibMaxDim - out.dim();
-       int off_a = kNnlibMaxDim - a.dim();
-       int off_b = kNnlibMaxDim - b.dim();
+    if (broadcast == 1) {
+      int out_shape[kNnlibMaxDim];
+      int inp1_shape[kNnlibMaxDim];
+      int inp2_shape[kNnlibMaxDim];
 
-       for(int i = 0; i < out.dim(); i++){
-            out_shape[i+off_o] = out.size(i);}
+      for (int i = 0; i < kNnlibMaxDim; i++) {
+        out_shape[i] = 1;
+        inp1_shape[i] = 1;
+        inp2_shape[i] = 1;
+      }
 
-       for(int i = 0; i < a.dim(); i++)
-            inp1_shape[i+off_a] = a.size(i);
+      int off_o = kNnlibMaxDim - out.dim();
+      int off_a = kNnlibMaxDim - a.dim();
+      int off_b = kNnlibMaxDim - b.dim();
 
-       for(int i = 0; i < b.dim(); i++)
-            inp2_shape[i+off_b] = b.size(i);
+      for (int i = 0; i < out.dim(); i++) {
+        out_shape[i + off_o] = out.size(i);
+      }
 
-       xa_nn_elm_minimum_broadcast_4D_f32xf32_f32(out_data, out_shape, a_data, inp1_shape, b_data, inp2_shape);
+      for (int i = 0; i < a.dim(); i++)
+        inp1_shape[i + off_a] = a.size(i);
+
+      for (int i = 0; i < b.dim(); i++)
+        inp2_shape[i + off_b] = b.size(i);
+
+      xa_nn_elm_minimum_broadcast_4D_f32xf32_f32(
+          out_data, out_shape, a_data, inp1_shape, b_data, inp2_shape);
+    } else {
+      xa_nn_elm_minimum_f32xf32_f32(out_data, a_data, b_data, out.numel());
     }
-    else
-    {
-        xa_nn_elm_minimum_f32xf32_f32(out_data, a_data, b_data, out.numel());
-    }
-  }
-  else
-  {
+  } else {
     ET_SWITCH_REALHB_TYPES(a_type, ctx, "minimum.out", CTYPE_A, [&]() {
       ET_SWITCH_REALHB_TYPES(b_type, ctx, "minimum.out", CTYPE_B, [&]() {
         using CTYPE_IN = typename torch::executor::
