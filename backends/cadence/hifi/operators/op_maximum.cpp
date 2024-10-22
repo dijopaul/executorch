@@ -143,23 +143,23 @@ Tensor& maximum_out(
     } else {
       xa_nn_elm_maximum_f32xf32_f32(out_data, a_data, b_data, out.numel());
     }
-  } else {
-    ET_SWITCH_REALHB_TYPES(a_type, ctx, "maximum.out", CTYPE_A, [&]() {
-      ET_SWITCH_REALHB_TYPES(b_type, ctx, "maximum.out", CTYPE_B, [&]() {
-        using CTYPE_IN = typename torch::executor::
-            promote_types<CTYPE_A, CTYPE_B, /*half_to_float*/ true>::type;
-        ET_DCHECK(CppTypeToScalarType<CTYPE_IN>::value == common_type);
-        ET_SWITCH_REALHB_TYPES(out_type, ctx, "maximum.out", CTYPE_OUT, [&]() {
-          MaximumInner<
-              can_cast<CTYPE_IN, CTYPE_OUT>::value,
-              CTYPE_A,
-              CTYPE_B,
-              CTYPE_IN,
-              CTYPE_OUT>::run(a, b, out);
-        });
+    return out;
+  }
+  ET_SWITCH_REALHB_TYPES(a_type, ctx, "maximum.out", CTYPE_A, [&]() {
+    ET_SWITCH_REALHB_TYPES(b_type, ctx, "maximum.out", CTYPE_B, [&]() {
+      using CTYPE_IN = typename torch::executor::
+          promote_types<CTYPE_A, CTYPE_B, /*half_to_float*/ true>::type;
+      ET_DCHECK(CppTypeToScalarType<CTYPE_IN>::value == common_type);
+      ET_SWITCH_REALHB_TYPES(out_type, ctx, "maximum.out", CTYPE_OUT, [&]() {
+        MaximumInner<
+            can_cast<CTYPE_IN, CTYPE_OUT>::value,
+            CTYPE_A,
+            CTYPE_B,
+            CTYPE_IN,
+            CTYPE_OUT>::run(a, b, out);
       });
     });
-  }
+  });
 
   return out;
 }
