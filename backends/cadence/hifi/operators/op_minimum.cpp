@@ -160,7 +160,7 @@ Tensor& minimum_out(
       });
     });
   });
-return out;
+  return out;
 }
 
 } // namespace native
