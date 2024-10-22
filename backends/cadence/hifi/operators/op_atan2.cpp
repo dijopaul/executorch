@@ -58,7 +58,7 @@ Tensor& atan2_out(
 
   WORD32 num_elm = out.numel();
 
-  if (!optimized) {
+  if (optimized) {
     if (broadcast) {
       WORD32* __restrict__ ptr1 =
           (WORD32* __restrict__)malloc(num_elm * sizeof(WORD32));
@@ -70,26 +70,16 @@ Tensor& atan2_out(
       WORD32* __restrict__ pin2 =
           (WORD32* __restrict__)b.const_data_ptr<float>();
 
-      WORD32 p_out_shape[max_dim];
-      WORD32 p_inp1_shape[max_dim];
-      WORD32 p_inp2_shape[max_dim];
-
-      for (int i = 0; i < kNnlibMaxDim; i++) {
-        p_inp1_shape[i] = 1;
-        p_inp2_shape[i] = 1;
-        p_out_shape[i] = 1;
-      }
-
-      int off_o = max_dim - out_dim;
-      int off_a = max_dim - a_dim;
-      int off_b = max_dim - b_dim;
+      WORD32 p_out_shape[kNnlibMaxDim];
+      WORD32 p_inp1_shape[kNnlibMaxDim];
+      WORD32 p_inp2_shape[kNnlibMaxDim];
 
       for (int i = 0; i < out_dim; i++)
-        p_out_shape[i + off_o] = out.size(i);
+        p_out_shape[i] = out.size(i);
       for (int i = 0; i < a_dim; i++)
-        p_inp1_shape[i + off_a] = a.size(i);
+        p_inp1_shape[i] = a.size(i);
       for (int i = 0; i < b_dim; i++)
-        p_inp2_shape[i + off_b] = b.size(i);
+        p_inp2_shape[i] = b.size(i);
 
       xa_nn_broadcast_32_32(ptr1, p_out_shape, pin1, p_inp1_shape, out_dim);
 
@@ -100,7 +90,7 @@ Tensor& atan2_out(
       const FLOAT32* __restrict__ p_inp1 = (const FLOAT32* __restrict__)ptr1;
       const FLOAT32* __restrict__ p_inp2 = (const FLOAT32* __restrict__)ptr2;
 
-      vecatan2f(p_out, p_inp1, p_inp2, num_elm);
+      xa_nn_elm_atan2_f32(p_out, p_inp1, p_inp2, num_elm);
 
       free(ptr1);
       free(ptr2);
@@ -111,21 +101,13 @@ Tensor& atan2_out(
       FLOAT32* __restrict__ pin1 =
           (FLOAT32* __restrict__)a.const_data_ptr<float>();
 
-      WORD32 p_out_shape[max_dim];
-      WORD32 p_inp1_shape[max_dim];
-
-      for (int i = 0; i < max_dim; i++) {
-        p_inp1_shape[i] = 1;
-        p_out_shape[i] = 1;
-      }
-
-      int off_o = max_dim - out_dim;
-      int off_a = max_dim - a_dim;
+      WORD32 p_out_shape[kNnlibMaxDim];
+      WORD32 p_inp1_shape[kNnlibMaxDim];
 
       for (int i = 0; i < out_dim; i++)
-        p_out_shape[i + off_o] = out.size(i);
+        p_out_shape[i] = out.size(i);
       for (int i = 0; i < a_dim; i++)
-        p_inp1_shape[i + off_a] = a.size(i);
+        p_inp1_shape[i] = a.size(i);
 
       xa_nn_broadcast_32_32(
           (WORD32*)ptr1, p_out_shape, (WORD32*)pin1, p_inp1_shape, out_dim);
@@ -136,7 +118,7 @@ Tensor& atan2_out(
       const FLOAT32* __restrict__ p_inp2 =
           (const FLOAT32* __restrict__)b.const_data_ptr<float>();
 
-      vecatan2f(p_out, p_inp1, p_inp2, num_elm);
+      xa_nn_elm_atan2_f32(p_out, p_inp1, p_inp2, num_elm);
 
       free(ptr1);
     } else if (b_is_broadcasted && (!a_is_broadcasted)) {
@@ -146,21 +128,13 @@ Tensor& atan2_out(
       WORD32* __restrict__ pin1 =
           (WORD32* __restrict__)b.const_data_ptr<float>();
 
-      WORD32 p_out_shape[max_dim];
-      WORD32 p_inp1_shape[max_dim];
-
-      for (int i = 0; i < max_dim; i++) {
-        p_inp1_shape[i] = 1;
-        p_out_shape[i] = 1;
-      }
-
-      int off_o = max_dim - out_dim;
-      int off_b = max_dim - b_dim;
+      WORD32 p_out_shape[kNnlibMaxDim];
+      WORD32 p_inp1_shape[kNnlibMaxDim];
 
       for (int i = 0; i < out_dim; i++)
-        p_out_shape[i + off_o] = out.size(i);
+        p_out_shape[i] = out.size(i);
       for (int i = 0; i < b_dim; i++)
-        p_inp1_shape[i + off_b] = b.size(i);
+        p_inp1_shape[i] = b.size(i);
 
       xa_nn_broadcast_32_32(ptr1, p_out_shape, pin1, p_inp1_shape, out_dim);
 
@@ -170,7 +144,7 @@ Tensor& atan2_out(
           (const FLOAT32* __restrict__)a.const_data_ptr<float>();
       const FLOAT32* __restrict__ p_inp2 = (const FLOAT32* __restrict__)ptr1;
 
-      vecatan2f(p_out, p_inp1, p_inp2, num_elm);
+      xa_nn_elm_atan2_f32(p_out, p_inp1, p_inp2, num_elm);
 
       free(ptr1);
     } else {
@@ -181,7 +155,7 @@ Tensor& atan2_out(
       const FLOAT32* __restrict__ p_inp2 =
           (const FLOAT32* __restrict__)b.const_data_ptr<float>();
 
-      vecatan2f(p_out, p_inp1, p_inp2, num_elm);
+      xa_nn_elm_atan2_f32(p_out, p_inp1, p_inp2, num_elm);
     }
     return out;
   }
