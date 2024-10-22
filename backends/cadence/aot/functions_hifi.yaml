@@ -60,7 +60,7 @@
 - op: full.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::full_out
+      kernel_name: impl::HiFi::full_out
 
 - op: mean.out
   kernels:
