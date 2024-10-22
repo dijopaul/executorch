@@ -158,7 +158,7 @@ const union ufloat32uint32 xa_nnlib_qNaNf       = { 0x7fc00000 };
 -------------------------------------------------------------------------*/
 
 #if !HAVE_VFPU && !HAVE_FPU
-DISCARD_FUN(void, xa_nnlib_vec_powf, (FLOAT32 * restrict z, const FLOAT32 * restrict y, const FLOAT32 * restrict x, WORD32 N))
+DISCARD_FUN(void, xa_nn_elm_pow_f32, (FLOAT32 * restrict z, const FLOAT32 * restrict y, const FLOAT32 * restrict x, WORD32 N))
 #elif HAVE_VFPU
 #define sz_f32    (int)sizeof(FLOAT32)
 static void mypowf(FLOAT32 * scr,
