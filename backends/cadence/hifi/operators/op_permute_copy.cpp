@@ -135,7 +135,6 @@ Tensor& permute_copy_out(
           num_out_dims,
           num_inp_dims);
 
-      return out;
     } else if (in_type == ScalarType::Byte) {
       WORD8* p_inp = (WORD8*)in.const_data_ptr<uint8_t>();
       WORD8* p_out = (WORD8*)out.mutable_data_ptr<uint8_t>();
@@ -161,9 +160,8 @@ Tensor& permute_copy_out(
           p_permute_vec,
           num_out_dims,
           num_inp_dims);
-
-      return out;
     }
+    return out;
   }
 
   size_t in_coord[kTensorDimensionLimit] = {0};
