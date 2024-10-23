@@ -24,6 +24,7 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bmm.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_clamp.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_div.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_full.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_maximum.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_mean.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_minimum.cpp"
