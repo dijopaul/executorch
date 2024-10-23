@@ -30,7 +30,7 @@
 - op: bmm.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::bmm_out
+      kernel_name: impl::HiFi::bmm_out
 
 - op: cat.out
   kernels:
@@ -81,6 +81,11 @@
   kernels:
     - arg_meta: null
       kernel_name: impl::HiFi::minimum_out
+      
+- op: mm.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::mm_out      
 
 - op: mul.out
   kernels:
