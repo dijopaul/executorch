@@ -76,6 +76,16 @@
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::permute_copy_out
+      
+- op: remainder.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::remainder_Tensor_out
+
+- op: remainder.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::remainder_Scalar_out      
 
 - op: sigmoid.out
   kernels:
