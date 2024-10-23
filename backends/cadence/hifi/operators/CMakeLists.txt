@@ -21,6 +21,7 @@ endif()
 # ATen compliant ops that are needed to run this model.
 set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_add.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_atan2.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bmm.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_clamp.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_div.cpp"
