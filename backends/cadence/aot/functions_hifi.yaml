@@ -65,7 +65,12 @@
 - op: mean.out
   kernels:
     - arg_meta: null
-      kernel_name: impl::HiFi::mean_dim_out   
+      kernel_name: impl::HiFi::mean_dim_out
+      
+- op: mm.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::mm_out      
 
 - op: mul.out
   kernels:
