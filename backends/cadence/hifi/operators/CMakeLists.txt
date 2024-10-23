@@ -21,6 +21,9 @@ endif()
 # ATen compliant ops that are needed to run this model.
 set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_add.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bitwise_and.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bitwise_or.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_bitwise_xor.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_div.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_mean.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_mul.cpp"
@@ -33,6 +36,8 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_clone.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_embedding.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_full.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_gt.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_lt.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_permute_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_slice_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_softmax.cpp"

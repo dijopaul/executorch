@@ -26,6 +26,36 @@
   kernels:
     - arg_meta: null
       kernel_name: impl::HiFi::add_out
+      
+- op: bitwise_and.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::bitwise_and_Scalar_out
+
+- op: bitwise_and.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::bitwise_and_Tensor_out
+      
+- op: bitwise_or.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::bitwise_or_Scalar_out
+
+- op: bitwise_or.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::bitwise_or_Tensor_out
+
+- op: bitwise_xor.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::bitwise_xor_Scalar_out
+
+- op: bitwise_xor.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::bitwise_xor_Tensor_out
 
 - op: bmm.out
   kernels:
@@ -61,6 +91,11 @@
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::full_out
+      
+- op: gt.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::gt_scalar_out
 
 - op: mean.out
   kernels:
@@ -71,6 +106,11 @@
   kernels:
     - arg_meta: null
       kernel_name: impl::HiFi::mul_out
+      
+- op: lt.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: torch::executor::lt_scalar_out
 
 - op: permute_copy.out
   kernels:
