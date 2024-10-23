@@ -32,7 +32,7 @@ Tensor& rsqrt_out(RuntimeContext& ctx, const Tensor& in, Tensor& out) {
   if (out.scalar_type() != ScalarType::Float)
     optimized = 0;
 
-  if (!optimized) {
+  if (optimized) {
     WORD32 num_elm = out.numel();
 
     FLOAT32* __restrict__ p_out =
@@ -42,9 +42,10 @@ Tensor& rsqrt_out(RuntimeContext& ctx, const Tensor& in, Tensor& out) {
 
     xa_nn_elm_rsqrt_f32_f32(p_out, p_inp, num_elm);
     return out;
-  } else
-    return torch::executor::native::internal::unary_ufunc_realhb_to_floath(
-        rsqrt, ctx, in, out);
+  }
+
+  return torch::executor::native::internal::unary_ufunc_realhb_to_floath(
+      rsqrt, ctx, in, out);
 }
 
 } // namespace native
