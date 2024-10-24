@@ -26,16 +26,26 @@
   kernels:
     - arg_meta: null
       kernel_name: impl::HiFi::add_out
+      
+- op: atan2.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::atan2_out 
 
 - op: bmm.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::bmm_out
+      kernel_name: impl::HiFi::bmm_out
 
 - op: cat.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::cat_out
+      kernel_name: impl::HiFi::cat_out
+
+- op: clamp.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::clamp_tensor_out
 
 - op: clone.out
   kernels:
@@ -56,16 +66,91 @@
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::embedding_out
+      
+- op: eq.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::eq_scalar_out
+
+- op: eq.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::eq_tensor_out
+      
+- op: ge.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::ge_scalar_out
+
+- op: ge.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::ge_tensor_out
+      
+- op: gt.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::gt_scalar_out
+
+- op: gt.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::gt_tensor_out   
+    
+- op: le.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::le_scalar_out
+
+- op: le.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::le_tensor_out  
+      
+- op: lt.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::lt_scalar_out
+
+- op: lt.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::lt_tensor_out
 
 - op: full.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::full_out
+      kernel_name: impl::HiFi::full_out
+
+- op: maximum.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::maximum_out
 
 - op: mean.out
   kernels:
     - arg_meta: null
-      kernel_name: impl::HiFi::mean_dim_out   
+      kernel_name: impl::HiFi::mean_dim_out 
+      
+- op: ne.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::ne_scalar_out
+
+- op: ne.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::ne_tensor_out      
+
+- op: minimum.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::minimum_out
+      
+- op: mm.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::mm_out
 
 - op: mul.out
   kernels:
@@ -75,8 +160,8 @@
 - op: permute_copy.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::permute_copy_out
-      
+    kernel_name: impl::HiFi::permute_copy_out
+
 - op: rsqrt.out
   kernels:
     - arg_meta: null
@@ -116,7 +201,7 @@
   kernels:
     - arg_meta: null
       kernel_name: impl::HiFi::where_out
-     
+ 
 # custom ops
 - func: cadence::quantize_per_tensor.out(Tensor input, float scale, int zero_point, int quant_min, int quant_max, ScalarType dtype, *, Tensor(a!) out) -> Tensor(a!)
   variants: function
