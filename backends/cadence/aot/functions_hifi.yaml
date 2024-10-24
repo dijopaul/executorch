@@ -160,7 +160,12 @@
 - op: permute_copy.out
   kernels:
     - arg_meta: null
-      kernel_name: impl::HiFi::permute_copy_out
+    kernel_name: impl::HiFi::permute_copy_out
+
+- op: rsqrt.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::rsqrt_out      
 
 - op: sigmoid.out
   kernels:
