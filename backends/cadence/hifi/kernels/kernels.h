@@ -89,19 +89,27 @@ extern "C" WORD32 xa_nn_elm_div_mode_broadcast_4D_f32xf32_f32(
     const WORD32 *const p_inp2_shape,
     WORD32 mode);
                                     
-extern "C" WORD32 xa_nn_elm_greater_lesser_equal_f32xf32_f32(WORD8 * __restrict__ p_out,
+extern "C" WORD32 xa_nn_elm_greater_lesser_equal_f32xf32_f32(
+    WORD8 * __restrict__ p_out,
     const FLOAT32 * __restrict__ p_inp1,
     const FLOAT32 * __restrict__ p_inp2,
     WORD32 num_elm,
     WORD32 kernel_type);                                    
 
-extern "C" WORD32 xa_nn_elm_greater_lesser_equal_broadcast_4D_f32xf32_f32(WORD8 * __restrict__ p_out,
+extern "C" WORD32 xa_nn_elm_greater_lesser_equal_broadcast_4D_f32xf32_f32(
+    WORD8 * __restrict__ p_out,
     const WORD32 *const p_out_shape,
     const FLOAT32 * __restrict__ p_inp1,
     const WORD32 *const p_inp1_shape,
     const FLOAT32 * __restrict__ p_inp2,
     const WORD32 *const p_inp2_shape,
     WORD32 kernel_type);
+
+extern "C" WORD32 xa_nn_elm_logicalxor_boolxbool_bool(
+     WORD8 * __restrict__ p_out,
+     const   WORD8 * __restrict__ p_inp1,
+     const   WORD8 * __restrict__ p_inp2,
+     WORD32  num_elm);   
 
 extern "C" WORD32 xa_nn_elm_maximum_f32xf32_f32(
     FLOAT32* __restrict__ p_out,
@@ -180,7 +188,7 @@ extern "C" WORD32 xa_nn_transpose_32_32(
   const WORD32 *const p_inp_shape,
   const WORD32 * __restrict__ p_permute_vec,
   WORD32 num_out_dims,
-  WORD32 num_inp_dims); 
+  WORD32 num_inp_dims);
 
 namespace impl {
 namespace HiFi {
