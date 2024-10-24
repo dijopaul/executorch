@@ -17,6 +17,16 @@
 
 /* Potential NNLIB function/APIs */
 
+extern "C" WORD32 xa_nn_concat_32_32(
+  WORD32 * __restrict__ p_out,
+  const WORD32 *const p_out_shape,
+  const WORD32 **pp_inps,
+  const WORD32 *const *pp_inps_shape,
+  WORD32 num_out_dims,
+  WORD32 num_inp,
+  WORD32 num_inp_dims,
+  WORD32 axis);
+                        
 extern "C" WORD32 xa_nn_broadcast_32_32(
     WORD32* __restrict__ p_out,
     const int* const out_shape,
@@ -157,13 +167,14 @@ extern "C" WORD32 xa_nn_elm_where_broadcast_4D_f32xf32_f32(
     const unsigned char* __restrict__ p_condition,
     const WORD32* const p_condition_shape);
 
-extern "C" WORD32 xa_nn_transpose_32_32(WORD32 * __restrict__ p_out,
-                                const WORD32 *const p_out_shape,
-                                const WORD32 * __restrict__ p_inp,
-                                const WORD32 *const p_inp_shape,
-                                const WORD32 * __restrict__ p_permute_vec,
-                                WORD32 num_out_dims,
-                                WORD32 num_inp_dims);   
+extern "C" WORD32 xa_nn_transpose_32_32(
+  WORD32 * __restrict__ p_out,
+  const WORD32 *const p_out_shape,
+  const WORD32 * __restrict__ p_inp,
+  const WORD32 *const p_inp_shape,
+  const WORD32 * __restrict__ p_permute_vec,
+  WORD32 num_out_dims,
+  WORD32 num_inp_dims);   
 
 namespace impl {
 namespace HiFi {
