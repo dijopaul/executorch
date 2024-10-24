@@ -73,12 +73,12 @@ Tensor& bitwise_xor_Tensor_out(
       WORD8* __restrict__ ptr2 = (WORD8* __restrict__)malloc(num_elm);
 
       const WORD8* __restrict__ pin1 =
-          (const WORD8* __restrict__)a.const_data_ptr<float>();
+          (const WORD8* __restrict__)a.const_data_ptr<bool>();
       const WORD8* __restrict__ pin2 =
-          (const WORD8* __restrict__)b.const_data_ptr<float>();
+          (const WORD8* __restrict__)b.const_data_ptr<bool>();
 
       WORD8* __restrict__ p_out =
-          (WORD8* __restrict__)out.mutable_data_ptr<float>();
+          (WORD8* __restrict__)out.mutable_data_ptr<bool>();
 
       WORD32 p_out_shape[kNnlibMaxDim];
       WORD32 p_inp2_shape[kNnlibMaxDim];
@@ -103,12 +103,12 @@ Tensor& bitwise_xor_Tensor_out(
       WORD8* __restrict__ ptr1 = (WORD8* __restrict__)malloc(num_elm);
 
       const WORD8* __restrict__ pin1 =
-          (const WORD8* __restrict__)a.const_data_ptr<float>();
+          (const WORD8* __restrict__)a.const_data_ptr<bool>();
       const WORD8* __restrict__ p_inp2 =
-          (const WORD8* __restrict__)b.const_data_ptr<float>();
+          (const WORD8* __restrict__)b.const_data_ptr<bool>();
 
       WORD8* __restrict__ p_out =
-          (WORD8* __restrict__)out.mutable_data_ptr<float>();
+          (WORD8* __restrict__)out.mutable_data_ptr<bool>();
 
       WORD32 p_out_shape[kNnlibMaxDim];
       WORD32 p_inp1_shape[kNnlibMaxDim];
@@ -127,12 +127,12 @@ Tensor& bitwise_xor_Tensor_out(
       WORD8* __restrict__ ptr1 = (WORD8* __restrict__)malloc(num_elm);
 
       const WORD8* __restrict__ p_inp1 =
-          (const WORD8* __restrict__)a.const_data_ptr<float>();
+          (const WORD8* __restrict__)a.const_data_ptr<bool>();
       const WORD8* __restrict__ pinp2 =
-          (const WORD8* __restrict__)b.const_data_ptr<float>();
+          (const WORD8* __restrict__)b.const_data_ptr<bool>();
 
       WORD8* __restrict__ p_out =
-          (WORD8* __restrict__)out.mutable_data_ptr<float>();
+          (WORD8* __restrict__)out.mutable_data_ptr<bool>();
 
       WORD32 p_out_shape[kNnlibMaxDim];
       WORD32 p_inp2_shape[kNnlibMaxDim];
@@ -149,12 +149,12 @@ Tensor& bitwise_xor_Tensor_out(
       xa_nn_elm_logicalxor_boolxbool_bool(p_out, p_inp1, p_inp2, num_elm);
     } else {
       const WORD8* __restrict__ p_inp1 =
-          (const WORD8* __restrict__)a.const_data_ptr<float>();
+          (const WORD8* __restrict__)a.const_data_ptr<bool>();
       const WORD8* __restrict__ p_inp2 =
-          (const WORD8* __restrict__)b.const_data_ptr<float>();
+          (const WORD8* __restrict__)b.const_data_ptr<bool>();
 
       WORD8* __restrict__ p_out =
-          (WORD8* __restrict__)out.mutable_data_ptr<float>();
+          (WORD8* __restrict__)out.mutable_data_ptr<bool>();
 
       xa_nn_elm_logicalxor_boolxbool_bool(p_out, p_inp1, p_inp2, num_elm);
     }
