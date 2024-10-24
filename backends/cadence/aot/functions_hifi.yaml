@@ -26,16 +26,26 @@
   kernels:
     - arg_meta: null
       kernel_name: impl::HiFi::add_out
+      
+- op: atan2.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::atan2_out 
 
 - op: bmm.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::bmm_out
+      kernel_name: impl::HiFi::bmm_out
 
 - op: cat.out
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::cat_out
+
+- op: clamp.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::clamp_tensor_out
 
 - op: clone.out
   kernels:
@@ -110,7 +120,12 @@
 - op: full.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::full_out
+      kernel_name: impl::HiFi::full_out
+
+- op: maximum.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::maximum_out
 
 - op: mean.out
   kernels:
@@ -126,6 +141,16 @@
   kernels:
     - arg_meta: null
       kernel_name: impl::HiFi::ne_tensor_out      
+
+- op: minimum.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::minimum_out
+      
+- op: mm.out
+  kernels:
+    - arg_meta: null
+      kernel_name: impl::HiFi::mm_out
 
 - op: mul.out
   kernels:
