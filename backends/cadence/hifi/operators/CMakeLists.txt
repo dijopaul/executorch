@@ -39,6 +39,7 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_mul.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_ne.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_permute_copy.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_pow.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_rsqrt.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sigmoid.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sub.cpp"

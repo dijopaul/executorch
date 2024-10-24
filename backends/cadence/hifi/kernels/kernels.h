@@ -16,16 +16,6 @@
 #include "xa_nnlib_kernels_api.h"
 
 /* Potential NNLIB function/APIs */
-
-extern "C" WORD32 xa_nn_concat_32_32(
-  WORD32 * __restrict__ p_out,
-  const WORD32 *const p_out_shape,
-  const WORD32 **pp_inps,
-  const WORD32 *const *pp_inps_shape,
-  WORD32 num_out_dims,
-  WORD32 num_inp,
-  WORD32 num_inp_dims,
-  WORD32 axis);
                         
 extern "C" WORD32 xa_nn_broadcast_32_32(
     WORD32* __restrict__ p_out,
@@ -33,6 +23,16 @@ extern "C" WORD32 xa_nn_broadcast_32_32(
     WORD32* __restrict__ p_in,
     const int* const in_shape,
     int num_dims);
+
+extern "C" WORD32 xa_nn_concat_32_32(
+    WORD32 * __restrict__ p_out,
+    const WORD32 *const p_out_shape,
+    const WORD32 **pp_inps,
+    const WORD32 *const *pp_inps_shape,
+    WORD32 num_out_dims,
+    WORD32 num_inp,
+    WORD32 num_inp_dims,
+    WORD32 axis);
 
 extern "C" WORD32 xa_nn_elm_add_broadcast_4D_f32xf32_f32(
     FLOAT32* __restrict__ p_out,
@@ -139,16 +139,11 @@ extern "C" WORD32 xa_nn_elm_mul_broadcast_4D_f32xf32_f32(
     const FLOAT32* __restrict__ p_inp2,
     const WORD32* const p_inp2_shape);
 
-extern "C" WORD32 xa_nn_reduce_mean_4D_f32_f32(
-    FLOAT32* __restrict__ p_out,
-    const WORD32* const p_out_shape,
-    const FLOAT32* __restrict__ p_inp,
-    const WORD32* const p_inp_shape,
-    const WORD32* __restrict__ p_axis,
-    WORD32 num_out_dims,
-    WORD32 num_inp_dims,
-    WORD32 num_axis_dims,
-    void* __restrict__ p_scratch_in);
+extern "C" void xa_nn_elm_pow_f32(
+    FLOAT32 * restrict z, 
+    const FLOAT32 * restrict x, 
+    const FLOAT32 * restrict y, 
+    WORD32 N );   
 
 extern "C" WORD32 xa_nn_elm_where_f32xf32_f32(
     FLOAT32* __restrict__ p_out,
@@ -167,6 +162,17 @@ extern "C" WORD32 xa_nn_elm_where_broadcast_4D_f32xf32_f32(
     const unsigned char* __restrict__ p_condition,
     const WORD32* const p_condition_shape);
 
+extern "C" WORD32 xa_nn_reduce_mean_4D_f32_f32(
+    FLOAT32* __restrict__ p_out,
+    const WORD32* const p_out_shape,
+    const FLOAT32* __restrict__ p_inp,
+    const WORD32* const p_inp_shape,
+    const WORD32* __restrict__ p_axis,
+    WORD32 num_out_dims,
+    WORD32 num_inp_dims,
+    WORD32 num_axis_dims,
+    void* __restrict__ p_scratch_in);
+
 extern "C" WORD32 xa_nn_transpose_32_32(
   WORD32 * __restrict__ p_out,
   const WORD32 *const p_out_shape,
@@ -174,7 +180,7 @@ extern "C" WORD32 xa_nn_transpose_32_32(
   const WORD32 *const p_inp_shape,
   const WORD32 * __restrict__ p_permute_vec,
   WORD32 num_out_dims,
-  WORD32 num_inp_dims);   
+  WORD32 num_inp_dims); 
 
 namespace impl {
 namespace HiFi {
