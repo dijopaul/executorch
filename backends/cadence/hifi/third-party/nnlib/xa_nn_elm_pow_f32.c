@@ -77,9 +77,9 @@ const union ufloat32uint32 ALIGN(8) xa_nnlib_log2f_coef[] =
   { 0x32a57060 }  /* 1.9259629891e-008 */
 };
 
-const union ufloat32uint32 xa_nnlib_plusInff  ={0x7f800000};
+const union ufloat32uint32 xa_nnlib_pow_plusInff  ={0x7f800000};
 
-const union ufloat32uint32 xa_nnlib_qNaNf       = { 0x7fc00000 };
+const union ufloat32uint32 xa_nnlib_pow_qNaNf       = { 0x7fc00000 };
 
 #define MIN(a,b)   ( (a)<(b) ? (a) : (b) )
 #define MAX(a,b)   ( (a)>(b) ? (a) : (b) )
@@ -481,10 +481,10 @@ static void mypowf(FLOAT32 * scr,
         sgn = AE_AND32(e0, xi0);
         /* process special numbers */
         b_yeqz = XT_OEQ_SX2((xtfloatx2)0.0f, y0);            /*  y ==0      */
-        b_yinf = XT_OEQ_SX2(XT_ABS_SX2(y0), xa_nnlib_plusInff.f);     /* |y|==Inf    */
+        b_yinf = XT_OEQ_SX2(XT_ABS_SX2(y0), xa_nnlib_pow_plusInff.f);     /* |y|==Inf    */
         b_xeqz = XT_OEQ_SX2(x0, (xtfloatx2)0.0f);            /*  x ==0      */
         b_xeq1 = XT_OEQ_SX2(xabs, (xtfloatx2)1.0f);          /* |x|==1      */
-        b_xinf = XT_OEQ_SX2(xabs, xa_nnlib_plusInff.f);               /* |x|==INF    */
+        b_xinf = XT_OEQ_SX2(xabs, xa_nnlib_pow_plusInff.f);               /* |x|==INF    */
 
         yint = AE_MOVAB2(b_yint);
         yeqz = AE_MOVAB2(b_yeqz);
@@ -509,11 +509,11 @@ static void mypowf(FLOAT32 * scr,
         b_zero = AE_MOVBA2(zero);
 
         /* Save special numbers and mask for special numbers */
-        spec = (xtfloatx2)xa_nnlib_qNaNf.f;
+        spec = (xtfloatx2)xa_nnlib_pow_qNaNf.f;
         XT_MOVF_SX2(spec, half, b_NaN1);
         XT_MOVT_SX2(spec, _0, b_zero);
-        XT_MOVT_SX2(spec, xa_nnlib_plusInff.f, b_Inf);
-        XT_MOVT_SX2(spec, xa_nnlib_qNaNf.f, b_NaN2);
+        XT_MOVT_SX2(spec, xa_nnlib_pow_plusInff.f, b_Inf);
+        XT_MOVT_SX2(spec, xa_nnlib_pow_qNaNf.f, b_NaN2);
         XT_MOVT_SX2(spec, _1, b_one);
 
         b_notspec = XT_OEQ_SX2(spec, half);
@@ -738,10 +738,10 @@ void xa_nn_elm_pow_f32(   FLOAT32 * restrict z,
       sgn = AE_AND32(e0, xi0);
       /* process special numbers */
       b_yeqz = (XT_OEQ_S((xtfloatx2)0.0f, y0));            /*  y ==0      */
-      b_yinf = (XT_OEQ_S(XT_ABS_SX2(y0), xa_nnlib_plusInff.f));     /* |y|==Inf    */
+      b_yinf = (XT_OEQ_S(XT_ABS_SX2(y0), xa_nnlib_pow_plusInff.f));     /* |y|==Inf    */
       b_xeqz = (XT_OEQ_S(x0, (xtfloatx2)0.0f));            /*  x ==0      */
       b_xeq1 = (XT_OEQ_S(xabs, (xtfloatx2)1.0f));          /* |x|==1      */
-      b_xinf = (XT_OEQ_S(xabs, xa_nnlib_plusInff.f));               /* |x|==INF    */
+      b_xinf = (XT_OEQ_S(xabs, xa_nnlib_pow_plusInff.f));               /* |x|==INF    */
   
       yint = AE_MOVAB2 (b_yint);
       yeqz = AE_MOVAB2 (b_yeqz);
@@ -767,11 +767,11 @@ void xa_nn_elm_pow_f32(   FLOAT32 * restrict z,
       b_zero = AE_MOVBA2(zero);
   
       /* Save special numbers and mask for special numbers */
-      spec = (xtfloat)xa_nnlib_qNaNf.f;
+      spec = (xtfloat)xa_nnlib_pow_qNaNf.f;
       XT_MOVF_S(spec, 0.5f, xtbool2_extract_0(b_NaN1));
       XT_MOVT_S(spec, 0.0f, xtbool2_extract_0(b_zero));
-      XT_MOVT_S(spec, xa_nnlib_plusInff.f, xtbool2_extract_0(b_Inf));
-      XT_MOVT_S(spec, xa_nnlib_qNaNf.f, xtbool2_extract_0(b_NaN2));
+      XT_MOVT_S(spec, xa_nnlib_pow_plusInff.f, xtbool2_extract_0(b_Inf));
+      XT_MOVT_S(spec, xa_nnlib_pow_qNaNf.f, xtbool2_extract_0(b_NaN2));
       XT_MOVT_S(spec, 1.0f, xtbool2_extract_0(b_one));
   
       b_notspec = XT_OEQ_S(spec, 0.5f);
@@ -1100,10 +1100,10 @@ void xa_nn_elm_pow_f32(FLOAT32 * restrict z,
         sgn = AE_AND32(e0, xi0);
         /* process special numbers */
         b_yeqz = XT_OEQ_S((xtfloat)0.0f, y0);            /*  y ==0      */
-        b_yinf = XT_OEQ_S(XT_ABS_S(y0), xa_nnlib_plusInff.f);     /* |y|==Inf    */
+        b_yinf = XT_OEQ_S(XT_ABS_S(y0), xa_nnlib_pow_plusInff.f);     /* |y|==Inf    */
         b_xeqz = XT_OEQ_S(x0, (xtfloat)0.0f);            /*  x ==0      */
         b_xeq1 = XT_OEQ_S(xabs, (xtfloat)1.0f);          /* |x|==1      */
-        b_xinf = XT_OEQ_S(xabs, xa_nnlib_plusInff.f);               /* |x|==INF    */
+        b_xinf = XT_OEQ_S(xabs, xa_nnlib_pow_plusInff.f);               /* |x|==INF    */
       
         yint = AE_MOVAB(b_yint);
         yeqz = AE_MOVAB(b_yeqz);
@@ -1128,11 +1128,11 @@ void xa_nn_elm_pow_f32(FLOAT32 * restrict z,
         b_zero = AE_MOVBA(zero);
       
         /* Save special numbers and mask for special numbers */
-        spec = (xtfloat)xa_nnlib_qNaNf.f;
+        spec = (xtfloat)xa_nnlib_pow_qNaNf.f;
         XT_MOVF_S(spec, half, b_NaN1);
         XT_MOVT_S(spec, _0, b_zero);
-        XT_MOVT_S(spec, xa_nnlib_plusInff.f, b_Inf);
-        XT_MOVT_S(spec, xa_nnlib_qNaNf.f, b_NaN2);
+        XT_MOVT_S(spec, xa_nnlib_pow_plusInff.f, b_Inf);
+        XT_MOVT_S(spec, xa_nnlib_pow_qNaNf.f, b_NaN2);
         XT_MOVT_S(spec, _1, b_one);
       
         b_notspec = XT_OEQ_S(spec, half);

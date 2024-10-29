@@ -34,9 +34,6 @@ Tensor& cat_out(
   if (out.scalar_type() != ScalarType::Float)
     optimized = 0;
 
-  if (in.dim() > kNnlibMaxDim)
-    optimized = 0;
-
   if (optimized) {
     WORD32 num_inp = tensors.size();
     WORD32 num_inp_dims = out.dim();
