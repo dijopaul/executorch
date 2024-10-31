@@ -83,6 +83,7 @@ target_include_directories(
 add_library(
   custom_ops "quantized_linear_out.cpp" "quantized_layer_norm.cpp"
              "quantize_per_tensor.cpp" "dequantize_per_tensor.cpp"
+             "quantized_conv_out.cpp"
 )
 target_include_directories(
   custom_ops PUBLIC ${ROOT_DIR}/.. ${CMAKE_BINARY_DIR}
