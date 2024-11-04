@@ -47,3 +47,4 @@ set(_common_compile_options -Wno-deprecated-declarations -fPIC)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_DIR}/operators)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_DIR}/kernels)
+
