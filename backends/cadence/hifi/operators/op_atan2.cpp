@@ -46,14 +46,14 @@ Tensor& atan2_out(
 
   const bool a_is_broadcasted = !out.sizes().equals(a.sizes());
   const bool b_is_broadcasted = !out.sizes().equals(b.sizes());
-  const bool broadcast = (a_is_broadcasted || b_is_broadcasted);
+  const bool broadcast = (a_is_broadcasted && b_is_broadcasted);
   int max_dim = a.dim() > b.dim() ? a.dim() : b.dim();
   max_dim = out.dim() > max_dim ? out.dim() : max_dim;
 
   if (out_type != ScalarType::Float)
     optimized = 0;
 
-  if ((broadcast == 1) && (max_dim > kNnlibMaxDim))
+  if (max_dim > kNnlibMaxDim)
     optimized = 0;
 
   WORD32 num_elm = out.numel();
