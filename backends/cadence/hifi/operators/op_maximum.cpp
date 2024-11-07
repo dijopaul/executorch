@@ -15,10 +15,10 @@
 using exec_aten::ScalarType;
 using exec_aten::Tensor;
 using executorch::aten::RuntimeContext;
-using executorch::runtime::canCast;
 using executorch::runtime::can_cast;
-using executorch::runtime::promoteTypes;
+using executorch::runtime::canCast;
 using executorch::runtime::CppTypeToScalarType;
+using executorch::runtime::promoteTypes;
 using torch::executor::apply_binary_elementwise_fn;
 using torch::executor::Error;
 using torch::executor::resize_to_broadcast_target_size;

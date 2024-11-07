@@ -18,8 +18,8 @@
 using exec_aten::Scalar;
 using exec_aten::ScalarType;
 using exec_aten::Tensor;
-using executorch::runtime::canCast;
 using executorch::runtime::can_cast;
+using executorch::runtime::canCast;
 using executorch::runtime::CppTypeToScalarType;
 using executorch::runtime::KernelRuntimeContext;
 using executorch::runtime::promoteTypes;
