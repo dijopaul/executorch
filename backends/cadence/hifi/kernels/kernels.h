@@ -15,6 +15,12 @@
 #include "xa_nnlib_kernels_api.h"
 
 /* Potential NNLIB function/APIs */
+extern "C" WORD32 xa_nn_vec_gelu_f32_f32(
+    FLOAT32* __restrict__ p_out,
+    FLOAT32* __restrict__ p_vec,
+    WORD32 vec_length,
+    WORD32 approx);
+
 extern "C" WORD32 xa_nn_broadcast_32_32(
     WORD32* __restrict__ p_out,
     const int* const out_shape,

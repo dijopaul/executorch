@@ -105,7 +105,7 @@
 - op: gelu.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::gelu_out
+      kernel_name: cadence::impl::HiFi::gelu_out
 
 - op: mean.out
   kernels:
