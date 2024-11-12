@@ -19,7 +19,9 @@ using exec_aten::Tensor;
 using executorch::aten::RuntimeContext;
 using executorch::runtime::can_cast;
 using executorch::runtime::CppTypeToScalarType;
+using executorch::runtime::tensors_have_same_dim_order;
 using torch::executor::Error;
+using torch::executor::KernelRuntimeContext;
 
 namespace cadence {
 namespace impl {
@@ -157,6 +159,70 @@ mul_out(RuntimeContext& ctx, const Tensor& a, const Tensor& b, Tensor& out) {
             CTYPE_IN,
             CTYPE_OUT>::run(a, b, out);
       });
+    });
+  });
+
+  return out;
+}
+
+Tensor& mul_scalar_out(
+    KernelRuntimeContext& ctx,
+    const Tensor& a,
+    const Scalar& b,
+    Tensor& out) {
+  (void)ctx;
+
+  // Resize for dynamic shape
+  ET_KERNEL_CHECK_MSG(
+      ctx,
+      resize_tensor(out, a.sizes()) == Error::Ok,
+      InvalidArgument,
+      out,
+      "Failed to resize output tensor.");
+
+  ET_KERNEL_CHECK(
+      ctx, tensors_have_same_dim_order(a, out), InvalidArgument, out);
+
+  ET_KERNEL_CHECK(
+      ctx,
+      executorch::runtime::tensor_is_realhbbf16_type(out),
+      InvalidArgument,
+      out);
+
+  ScalarType a_type = a.scalar_type();
+  ScalarType b_type = torch::executor::native::utils::get_scalar_dtype(b);
+  ScalarType common_type =
+      torch::executor::native::utils::promote_type_with_scalar(
+          a_type, b, /*half_to_float*/ false);
+  ScalarType out_type = out.scalar_type();
+
+  ET_KERNEL_CHECK(ctx, common_type == out_type, InvalidArgument, out);
+
+  if (common_type == ScalarType::Half || common_type == ScalarType::BFloat16) {
+    common_type = ScalarType::Float;
+  }
+
+  ET_SWITCH_REALHBBF16_TYPES(a_type, ctx, "mul.Scalar_out", CTYPE_A, [&]() {
+    ET_SWITCH_SCALAR_OBJ_TYPES(b_type, ctx, "mul.Scalar_out", CTYPE_B, [&]() {
+      ET_SWITCH_REALB_TYPES(
+          common_type, ctx, "mul.Scalar_out", CTYPE_IN, [&]() {
+            ET_SWITCH_REALHBBF16_TYPES(
+                out_type, ctx, "mul.Scalar_out", CTYPE_OUT, [&]() {
+                  CTYPE_B b_val;
+                  torch::executor::native::utils::extract_scalar(b, &b_val);
+                  CTYPE_IN b_casted = static_cast<CTYPE_IN>(b_val);
+
+                  torch::executor::apply_unary_map_fn(
+                      [b_casted](const CTYPE_A val_a) {
+                        CTYPE_IN a_casted = static_cast<CTYPE_IN>(val_a);
+                        CTYPE_IN value = a_casted * b_casted;
+                        return static_cast<CTYPE_OUT>(value);
+                      },
+                      a.const_data_ptr<CTYPE_A>(),
+                      out.mutable_data_ptr<CTYPE_OUT>(),
+                      out.numel());
+                });
+          });
     });
   });
 

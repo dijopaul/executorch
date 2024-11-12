@@ -15,6 +15,71 @@
 #include "xa_nnlib_kernels_api.h"
 
 /* Potential NNLIB function/APIs */
+extern "C" WORD32 xa_nn_broadcast_32_32(
+    WORD32* __restrict__ p_out,
+    const int* const out_shape,
+    WORD32* __restrict__ p_in,
+    const int* const in_shape,
+    int num_dims);
+
+extern "C" void xa_nn_elm_pow_f32(
+    FLOAT32* restrict z,
+    const FLOAT32* restrict x,
+    const FLOAT32* restrict y,
+    WORD32 N);
+
+extern "C" WORD32 xa_nn_elm_logicalxor_boolxbool_bool(
+    WORD8* __restrict__ p_out,
+    const WORD8* __restrict__ p_inp1,
+    const WORD8* __restrict__ p_inp2,
+    WORD32 num_elm);
+
+extern "C" WORD32 xa_nn_concat_32_32(
+    WORD32* __restrict__ p_out,
+    const WORD32* const p_out_shape,
+    const WORD32** pp_inps,
+    const WORD32* const* pp_inps_shape,
+    WORD32 num_out_dims,
+    WORD32 num_inp,
+    WORD32 num_inp_dims,
+    WORD32 axis);
+
+extern "C" WORD32 xa_nn_transpose_32_32(
+    WORD32* __restrict__ p_out,
+    const WORD32* const p_out_shape,
+    const WORD32* __restrict__ p_inp,
+    const WORD32* const p_inp_shape,
+    const WORD32* __restrict__ p_permute_vec,
+    WORD32 num_out_dims,
+    WORD32 num_inp_dims);
+
+extern "C" WORD32 xa_nn_conv2d_per_chan_asym8xasym8(
+    UWORD8* __restrict__ p_out,
+    const UWORD8* __restrict__ p_inp,
+    const UWORD8* __restrict__ p_kernel,
+    const WORD32* __restrict__ p_bias,
+    WORD32 input_height,
+    WORD32 input_width,
+    WORD32 input_channels,
+    WORD32 kernel_height,
+    WORD32 kernel_width,
+    WORD32 kernel_channels,
+    WORD32 dilation_height,
+    WORD32 dilation_width,
+    WORD32 out_channels,
+    WORD32 x_stride,
+    WORD32 y_stride,
+    WORD32 x_padding,
+    WORD32 y_padding,
+    WORD32 out_height,
+    WORD32 out_width,
+    WORD32 input_zero_bias,
+    WORD32* p_out_multiplier,
+    WORD32* p_out_shift,
+    WORD32 out_zero_bias,
+    WORD32 out_data_format,
+    VOID* p_scratch);
+
 extern "C" WORD32 xa_nn_elm_add_broadcast_4D_f32xf32_f32(
     FLOAT32* __restrict__ p_out,
     const WORD32* const p_out_shape,
@@ -22,6 +87,9 @@ extern "C" WORD32 xa_nn_elm_add_broadcast_4D_f32xf32_f32(
     const WORD32* const p_inp1_shape,
     const FLOAT32* __restrict__ p_inp2,
     const WORD32* const p_inp2_shape);
+
+extern "C" void
+xa_nn_elm_atan2_f32(FLOAT32* z, const FLOAT32* y, const FLOAT32* x, WORD32 N);
 
 extern "C" WORD32 xa_nn_elm_div_broadcast_4D_f32xf32_f32(
     FLOAT32* __restrict__ p_out,
