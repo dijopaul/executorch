@@ -11,6 +11,7 @@
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include <stdio.h>
 
+namespace cadence {
 namespace impl {
 namespace HiFi {
 namespace native {
@@ -44,13 +45,13 @@ Tensor& full_out(
 
   constexpr auto name = "full.out";
 
-  bool optimized = 0;
+  bool optimized = false;
   if (out_type == ScalarType::Long || out_type == ScalarType::Float ||
       out_type == ScalarType::Byte || out_type == ScalarType::Char)
-    optimized = 1;
-    
-  if(out_type != val_type)
-    optimized = 0;
+    optimized = true;
+
+  if (out_type != val_type)
+    optimized = false;
 
   if (optimized) {
     if (out_type == ScalarType::Long) {
@@ -65,10 +66,7 @@ Tensor& full_out(
       float val;
       extract_scalar(fill_value, &val);
 
-      WORD32 ret_val = xa_nn_memset_f32_f32(
-      data_out,
-      val,
-      out.numel());
+      WORD32 ret_val = xa_nn_memset_f32_f32(data_out, val, out.numel());
 
       ET_KERNEL_CHECK(ctx, ret_val == 0, Internal, out);
 
@@ -99,3 +97,4 @@ Tensor& full_out(
 } // namespace native
 } // namespace HiFi
 } // namespace impl
+} // namespace cadence

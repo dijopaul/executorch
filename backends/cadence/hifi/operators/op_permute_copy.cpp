@@ -22,6 +22,7 @@ using torch::executor::check_permute_copy_args;
 using torch::executor::Error;
 using torch::executor::get_permute_copy_out_target_size;
 
+namespace cadence {
 namespace impl {
 namespace HiFi {
 namespace native {
@@ -75,11 +76,9 @@ Tensor& permute_copy_out(
 
   bool optimized = false;
 
-  if (out.scalar_type() == ScalarType::Float)
-    optimized = true;
-  else if (out.scalar_type() == ScalarType::Char)
-    optimized = true;
-  else if (out.scalar_type() == ScalarType::Byte)
+  if (out.scalar_type() == ScalarType::Float ||
+      out.scalar_type() == ScalarType::Char ||
+      out.scalar_type() == ScalarType::Byte)
     optimized = true;
 
   if (in.dim() > kNnlibMaxDim)
@@ -103,7 +102,7 @@ Tensor& permute_copy_out(
         p_permute_vec[i] = dims[i];
       }
 
-      WORD32 val = xa_nn_transpose_32_32(
+      WORD32 ret_val = xa_nn_transpose_32_32(
           p_out,
           p_out_shape,
           p_inp,
@@ -112,7 +111,8 @@ Tensor& permute_copy_out(
           num_out_dims,
           num_inp_dims);
 
-      return out;
+      ET_KERNEL_CHECK(ctx, ret_val == 0, Internal, out);
+
     } else if (in_type == ScalarType::Char) {
       WORD8* p_inp = (WORD8*)in.const_data_ptr<char>();
       WORD8* p_out = (WORD8*)out.mutable_data_ptr<char>();
@@ -195,3 +195,4 @@ Tensor& permute_copy_out(
 } // namespace native
 } // namespace HiFi
 } // namespace impl
+} // namespace cadence

@@ -23,6 +23,7 @@ using torch::executor::check_cat_args;
 using torch::executor::Error;
 using torch::executor::get_cat_out_target_size;
 
+namespace cadence {
 namespace impl {
 namespace HiFi {
 namespace native {
@@ -154,3 +155,4 @@ Tensor& cat_out(
 } // namespace native
 } // namespace HiFi
 } // namespace impl
+} // namespace cadence
