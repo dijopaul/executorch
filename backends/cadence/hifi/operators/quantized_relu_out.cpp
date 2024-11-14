@@ -58,17 +58,34 @@ void quantized_relu_out(
     uint8_t* p_out = output.mutable_data_ptr<uint8_t>();
     uint8_t q_zero_point = in_zero_point.const_data_ptr<uint8_t>()[0];
 
-    WORD32 ret_val = xa_nn_vec_activation_min_max_asym8u_asym8u(
-        p_out, p_in, (int)q_zero_point, (int)255, input.numel());
+    WORD32 ret_val = xa_nn_vec_relu_asym8u_asym8u(
+        p_out,
+        p_in,
+        (int)q_zero_point,
+        out_multiplier.const_data_ptr<int32_t>()[0],
+        out_shift.const_data_ptr<int32_t>()[0],
+        (int)out_zero_point,
+        0,
+        255,
+        input.numel());
 
     ET_CHECK_MSG(ret_val == 0, "An internal error occured");
+
   } else if (input.scalar_type() == executorch::aten::ScalarType::Char) {
     const int8_t* p_in = input.const_data_ptr<int8_t>();
     int8_t* p_out = output.mutable_data_ptr<int8_t>();
     int8_t q_zero_point = in_zero_point.const_data_ptr<int8_t>()[0];
 
-    WORD32 ret_val = xa_nn_vec_activation_min_max_8_8(
-        p_out, p_in, (int)q_zero_point, (int)128, input.numel());
+    WORD32 ret_val = xa_nn_vec_relu_asym8s_asym8s(
+        p_out,
+        p_in,
+        (int)q_zero_point,
+        out_multiplier.const_data_ptr<int32_t>()[0],
+        out_shift.const_data_ptr<int32_t>()[0],
+        (int)out_zero_point,
+        -128,
+        127,
+        input.numel());
 
     ET_CHECK_MSG(ret_val == 0, "An internal error occured");
 
