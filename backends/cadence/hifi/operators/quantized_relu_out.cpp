@@ -40,8 +40,8 @@ void quantized_relu_(
       -out_multiplier_data[0] * 1.0 / (1 << 31) * pow(2, out_shift_data[0]);
 
   for (size_t i = 0, e = input.numel(); i < e; ++i) {
-    const T temp = in[i] > q_zero_point ? (in[i] - q_zero_point) : 0;
-    out[i] = kernels::quantize<T>(temp, out_scale, out_zero_point);
+    float temp = in[i] > q_zero_point ? (in[i] - q_zero_point) : 0;
+    out[i] = kernels::quantize<T>(temp, out_scale, (int32_t)out_zero_point);
   }
 }
 
@@ -65,7 +65,7 @@ void quantized_relu_out(
         out_multiplier.const_data_ptr<int32_t>()[0],
         out_shift.const_data_ptr<int32_t>()[0],
         (int)out_zero_point,
-        0,
+        (int)out_zero_point,
         255,
         input.numel());
 
@@ -83,7 +83,7 @@ void quantized_relu_out(
         out_multiplier.const_data_ptr<int32_t>()[0],
         out_shift.const_data_ptr<int32_t>()[0],
         (int)out_zero_point,
-        -128,
+        (int)out_zero_point,
         127,
         input.numel());
 
