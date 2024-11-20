@@ -69,13 +69,20 @@ void quantized_relu_out(
         255,
         input.numel());
   } else if (input.scalar_type() == executorch::aten::ScalarType::Char) {
-    quantized_relu_<int8_t>(
-        input,
-        in_zero_point,
-        out_zero_point,
-        out_multiplier,
-        out_shift,
-        output);
+    const int8_t* p_in = input.const_data_ptr<int8_t>();
+    int8_t* p_out = output.mutable_data_ptr<int8_t>();
+    int8_t q_zero_point = in_zero_point.const_data_ptr<int8_t>()[0];
+
+    xa_nn_vec_relu_asym8s_asym8s(
+        p_out,
+        p_in,
+        (int)q_zero_point,
+        out_multiplier.const_data_ptr<int32_t>()[0],
+        out_shift.const_data_ptr<int32_t>()[0],
+        (int)out_zero_point,
+        (int)out_zero_point,
+        127,
+        input.numel());
   } else {
     ET_CHECK_MSG(
         false,
