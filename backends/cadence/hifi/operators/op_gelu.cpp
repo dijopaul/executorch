@@ -49,7 +49,7 @@ Tensor& gelu_out(
   if (out_type != ScalarType::Float)
     optimized = 0;
 
-  if (optimized == 1) {
+  if (optimized) {
     int approx;
     if (approximate == "tanh")
       approx = 1;

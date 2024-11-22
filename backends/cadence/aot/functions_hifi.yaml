@@ -20,7 +20,7 @@
 - op: _softmax.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::softmax_out
+      kernel_name: cadence::impl::HiFi::softmax_out
 
 - op: add.out
   kernels:

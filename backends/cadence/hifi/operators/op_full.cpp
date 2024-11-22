@@ -50,8 +50,8 @@ Tensor& full_out(
       out_type == ScalarType::Byte || out_type == ScalarType::Char)
     optimized = 1;
 
-  if (out_type != val_type)
-    optimized = 0;
+  // if (out_type != val_type)
+  // optimized = 0;
 
   if (optimized) {
     if (out_type == ScalarType::Long) {
