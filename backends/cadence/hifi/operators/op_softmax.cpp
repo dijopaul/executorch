@@ -17,12 +17,18 @@
 using Tensor = exec_aten::Tensor;
 using exec_aten::ScalarType;
 using executorch::runtime::KernelRuntimeContext;
+using executorch::runtime::Result;
 using torch::executor::Error;
 
 namespace cadence {
 namespace impl {
 namespace HiFi {
 namespace native {
+
+void* allocate_temp_memory(KernelRuntimeContext& ctx, size_t size) {
+  Result<void*> temp_mem_res = ctx.allocate_temp(size);
+  return temp_mem_res.ok() ? temp_mem_res.get() : nullptr;
+}
 
 Tensor& softmax_out(
     KernelRuntimeContext& ctx,
@@ -34,7 +40,7 @@ Tensor& softmax_out(
 
   ET_KERNEL_CHECK(
       ctx,
-       torch::executor::check_softmax_args(in, dim, half_to_float, out),
+      torch::executor::check_softmax_args(in, dim, half_to_float, out),
       InvalidArgument,
       out);
 
@@ -42,7 +48,10 @@ Tensor& softmax_out(
       ctx, resize_tensor(out, in.sizes()) == Error::Ok, InvalidArgument, out);
 
   ET_KERNEL_CHECK(
-      ctx,  executorch::runtime::tensors_have_same_dim_order(in, out), InvalidArgument, out);
+      ctx,
+      executorch::runtime::tensors_have_same_dim_order(in, out),
+      InvalidArgument,
+      out);
 
   // Adjust for negative dim
   dim = dim < 0 ? dim + executorch::runtime::nonzero_dim(in) : dim;
@@ -50,85 +59,85 @@ Tensor& softmax_out(
   const exec_aten::optional<int64_t>& dim_t = dim;
   const size_t d = ET_NORMALIZE_IX(dim_t.value(), in.dim());
   const size_t size = in.size(d);
-  
+
   size_t stride = 1, outer_size = 1;
-  
+
   size_t outer_stride = 1;
-  
+
   constexpr auto name = "_softmax.out";
   constexpr int kNnlibMaxDim = 16;
-  
+
   bool optimized = 1;
-  
-  if(out.scalar_type() != ScalarType::Float)
-      optimized = 0;
-  
+
+  if (out.scalar_type() != ScalarType::Float)
+    optimized = 0;
+
   if (in.dim() > kNnlibMaxDim)
     optimized = 0;
-  
-  if(optimized)
-  {
-    int * p_inp = (int *)in.const_data_ptr<float>();
-    int * out_data = (int *)out.mutable_data_ptr<float>();
+
+  if (optimized) {
+    int* p_inp = (int*)in.const_data_ptr<float>();
+    int* out_data = (int*)out.mutable_data_ptr<float>();
 
     int num_inp_dims = in.dim();
     int num_out_dims = num_inp_dims;
-    
+
     int p_inp_shape[kNnlibMaxDim];
     int p_out_shape[kNnlibMaxDim];
     int p_permute_vec[kNnlibMaxDim];
-    
-    for(int i = 0; i < num_inp_dims; i++)
-      p_inp_shape[i] =  in.size(i);
-    
-    for(int i = 0; i < num_inp_dims; i++)
-    {
-      if(i == d)
+
+    for (int i = 0; i < num_inp_dims; i++)
+      p_inp_shape[i] = in.size(i);
+
+    for (int i = 0; i < num_inp_dims; i++) {
+      if (i == d)
         p_permute_vec[i] = num_inp_dims - 1;
-      else if(i == (num_inp_dims - 1))
+      else if (i == (num_inp_dims - 1))
         p_permute_vec[num_inp_dims - 1] = d;
-      else 
+      else
         p_permute_vec[i] = i;
-        
+
       p_out_shape[i] = p_inp_shape[p_permute_vec[i]];
-      
-      if(i != d)
+
+      if (i != d)
         outer_size = outer_size * p_inp_shape[i];
     }
-    
+
     outer_stride = size;
-    
-    int * p_out = (int *)malloc(out.numel() * sizeof(int));
-    int * p_out1 = (int *)malloc(out.numel() * sizeof(int));
-    
-    xa_nn_transpose_32_32(p_out,
-                          p_out_shape,
-                          p_inp,
-                          p_inp_shape,
-                          p_permute_vec,
-                          num_out_dims,
-                          num_inp_dims);
-    
+
+    int* p_out = (int*)allocate_temp_memory(ctx, out.numel() * sizeof(int));
+    int* p_out1 = (int*)allocate_temp_memory(ctx, out.numel() * sizeof(int));
+
+    xa_nn_transpose_32_32(
+        p_out,
+        p_out_shape,
+        p_inp,
+        p_inp_shape,
+        p_permute_vec,
+        num_out_dims,
+        num_inp_dims);
+
     for (size_t outer_idx = 0; outer_idx < outer_size; ++outer_idx) {
       size_t outer = outer_idx * outer_stride;
       for (size_t inner_idx = 0; inner_idx < stride; ++inner_idx) {
         size_t base = outer + inner_idx;
-        
+
         float* p_in_data = (float*)&p_out[base];
         float* p_out_data = (float*)&p_out1[base];
-        
+
         xa_nn_vec_softmax_f32_f32(p_out_data, p_in_data, size);
       }
     }
-  
-    xa_nn_transpose_32_32(out_data,
-                          p_inp_shape,
-                          p_out1,
-                          p_out_shape,
-                          p_permute_vec,
-                          num_out_dims,
-                          num_inp_dims);
-                        
+
+    xa_nn_transpose_32_32(
+        out_data,
+        p_inp_shape,
+        p_out1,
+        p_out_shape,
+        p_permute_vec,
+        num_out_dims,
+        num_inp_dims);
+
     return out;
   }
 
@@ -150,16 +159,17 @@ Tensor& softmax_out(
               size,
               stride);
 
-          const CTYPE temp_sum = torch::executor::apply_unary_map_reduce_fn<CTYPE, CTYPE>(
-              [max_in](const CTYPE val_in) {
-                return std::exp(val_in - max_in);
-              },
-              [](const CTYPE mapped_in, CTYPE val_accum) {
-                return val_accum + mapped_in;
-              },
-              in_data + base,
-              size,
-              stride);
+          const CTYPE temp_sum =
+              torch::executor::apply_unary_map_reduce_fn<CTYPE, CTYPE>(
+                  [max_in](const CTYPE val_in) {
+                    return std::exp(val_in - max_in);
+                  },
+                  [](const CTYPE mapped_in, CTYPE val_accum) {
+                    return val_accum + mapped_in;
+                  },
+                  in_data + base,
+                  size,
+                  stride);
 
           torch::executor::apply_unary_map_fn(
               [max_in, temp_sum](const CTYPE val_in) {
