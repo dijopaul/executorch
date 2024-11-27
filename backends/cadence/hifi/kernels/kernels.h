@@ -14,8 +14,12 @@
 /* For NNLIB APIs */
 #include "xa_nnlib_kernels_api.h"
 
-/* Potential NNLIB function/APIs */
+#include <executorch/runtime/kernel/kernel_includes.h>
 
+using executorch::runtime::KernelRuntimeContext;
+using executorch::runtime::Result;
+
+/* Potential NNLIB function/APIs */
 extern "C" WORD32 xa_nn_broadcast_32_32(
     WORD32* __restrict__ p_out,
     const int* const out_shape,
@@ -148,6 +152,8 @@ namespace cadence {
 namespace impl {
 namespace HiFi {
 namespace kernels {
+
+void* allocate_temp_memory(KernelRuntimeContext& ctx, size_t size);
 
 void memcpy(void* dst, const void* src, size_t num_bytes);
 

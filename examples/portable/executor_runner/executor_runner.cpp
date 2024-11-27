@@ -30,7 +30,15 @@
 #include <executorch/runtime/platform/log.h>
 #include <executorch/runtime/platform/runtime.h>
 
+#if __XTENSA__
+#include <stdio.h>
+#include <sys/times.h>
+#include <xtensa/sim.h>
+#endif
+
 static uint8_t method_allocator_pool[4 * 1024U * 1024U]; // 4 MB
+
+static uint8_t temp_allocator_pool[1024U * 1024U];
 
 DEFINE_string(
     model_path,
@@ -120,6 +128,10 @@ int main(int argc, char** argv) {
   MemoryAllocator method_allocator{
       MemoryAllocator(sizeof(method_allocator_pool), method_allocator_pool)};
 
+  // Temporary memory required by kernels
+  MemoryAllocator temp_allocator{
+      MemoryAllocator(sizeof(temp_allocator_pool), temp_allocator_pool)};
+
   // The memory-planned buffers will back the mutable tensors used by the
   // method. The sizes of these buffers were determined ahead of time during the
   // memory-planning pasees.
@@ -144,7 +156,7 @@ int main(int argc, char** argv) {
 
   // Assemble all of the allocators into the MemoryManager that the Executor
   // will use.
-  MemoryManager memory_manager(&method_allocator, &planned_memory);
+  MemoryManager memory_manager(&method_allocator, &planned_memory, &temp_allocator);
 
   //
   // Load the method from the program, using the provided allocators. Running
@@ -170,8 +182,22 @@ int main(int argc, char** argv) {
       (uint32_t)inputs.error());
   ET_LOG(Info, "Inputs prepared.");
 
+#if __XTENSA__
+  struct tms start, stop;
+  xt_iss_client_command("all", "disable");
+  xt_iss_client_command("all", "enable");
+  times(&start);
+#endif
+
   // Run the model.
   Error status = method->execute();
+
+#if __XTENSA__
+  times(&stop);
+  xt_iss_client_command("all", "disable");
+  ET_LOG(Info, "Execute cycles = %ld", (stop.tms_utime - start.tms_utime));
+#endif
+
   ET_CHECK_MSG(
       status == Error::Ok,
       "Execution of method %s failed with status 0x%" PRIx32,
