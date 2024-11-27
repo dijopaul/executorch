@@ -26,6 +26,7 @@ using executorch::runtime::promoteTypes;
 using torch::executor::Error;
 using torch::executor::resize_to_broadcast_target_size;
 
+namespace cadence {
 namespace impl {
 namespace HiFi {
 namespace native {
@@ -119,9 +120,11 @@ Tensor& pow_Tensor_Tensor_out(
   if (optimized) {
     if (broadcast) {
       WORD32* __restrict__ ptr1 =
-          (WORD32* __restrict__)malloc(num_elm * sizeof(WORD32));
+          (WORD32* __restrict__)kernels::allocate_temp_memory(
+              ctx, num_elm * sizeof(int));
       WORD32* __restrict__ ptr2 =
-          (WORD32* __restrict__)malloc(num_elm * sizeof(WORD32));
+          (WORD32* __restrict__)kernels::allocate_temp_memory(
+              ctx, num_elm * sizeof(int));
 
       WORD32* __restrict__ pin1 =
           (WORD32* __restrict__)a.const_data_ptr<float>();
@@ -154,7 +157,8 @@ Tensor& pow_Tensor_Tensor_out(
       free(ptr2);
     } else if (a_is_broadcasted && (!b_is_broadcasted)) {
       FLOAT32* __restrict__ ptr1 =
-          (FLOAT32* __restrict__)malloc((num_elm + 2) * sizeof(WORD32));
+          (FLOAT32* __restrict__)kernels::allocate_temp_memory(
+              ctx, num_elm * sizeof(int));
 
       FLOAT32* __restrict__ pin1 =
           (FLOAT32* __restrict__)a.const_data_ptr<float>();
@@ -181,7 +185,8 @@ Tensor& pow_Tensor_Tensor_out(
       free(ptr1);
     } else if (b_is_broadcasted && (!a_is_broadcasted)) {
       WORD32* __restrict__ ptr1 =
-          (WORD32* __restrict__)malloc(num_elm * sizeof(WORD32));
+          (WORD32* __restrict__)kernels::allocate_temp_memory(
+              ctx, num_elm * sizeof(int));
 
       WORD32* __restrict__ pin1 =
           (WORD32* __restrict__)b.const_data_ptr<float>();
@@ -349,3 +354,4 @@ Tensor& pow_Scalar_out(
 } // namespace native
 } // namespace HiFi
 } // namespace impl
+} // namespace cadence

@@ -38,6 +38,7 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_bmm.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_clone.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_embedding.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_gt.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_slice_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_softmax.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_split_with_sizes_copy.cpp"
