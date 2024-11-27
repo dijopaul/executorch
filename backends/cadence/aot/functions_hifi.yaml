@@ -25,7 +25,7 @@
 - op: add.out
   kernels:
     - arg_meta: null
-      kernel_name: impl::HiFi::add_out
+      kernel_name: cadence::impl::HiFi::add_out
 
 - op: bmm.out
   kernels:
@@ -80,7 +80,7 @@
 - op: minimum.out
   kernels:
     - arg_meta: null
-      kernel_name: impl::HiFi::minimum_out
+      kernel_name: cadence::impl::HiFi::minimum_out
 
 - op: mul.out
   kernels:
@@ -110,7 +110,7 @@
 - op: rsqrt.out
   kernels:
     - arg_meta: null
-      kernel_name: impl::HiFi::rsqrt_out
+      kernel_name: cadence::impl::HiFi::rsqrt_out
 
 - op: sigmoid.out
   kernels:
