@@ -32,7 +32,7 @@ def get_xnnpack_partitioner(dynamic_quant_only_partitioner: bool = True):
 
 
 def get_vulkan_partitioner(
-    dtype_override: Optional[str] = None, quantization_mode: Optional[str] = None
+    dtype_override: Optional[str] = None, enable_dynamic_shape: bool = False
 ):
     assert (
         dtype_override == "fp32" or dtype_override is None
@@ -41,7 +41,7 @@ def get_vulkan_partitioner(
         VulkanPartitioner,
     )
 
-    return VulkanPartitioner({"require_dynamic_shapes": True})
+    return VulkanPartitioner({"require_dynamic_shapes": enable_dynamic_shape})
 
 
 def get_mps_partitioner(use_kv_cache: bool = False):
@@ -160,10 +160,8 @@ def get_qnn_partitioner(
             QnnPartitioner,
         )
 
-        # pyre-ignore: Undefined import [21]: Could not find a module corresponding to import `executorch.backends.qualcomm.serialization.qnn_compile_spec_schema`
-        from executorch.backends.qualcomm.serialization.qnn_compile_spec_schema import (
-            QcomChipset,
-        )
+        # pyre-ignore: Undefined import [21]: Could not find a module corresponding to import `executorch.backends.qualcomm.serialization.qc_schema`
+        from executorch.backends.qualcomm.serialization.qc_schema import QcomChipset
 
         # pyre-ignore: Undefined import [21]: Could not find a module corresponding to import `executorch.backends.qualcomm.utils.utils`
         from executorch.backends.qualcomm.utils.utils import (

@@ -501,6 +501,24 @@ class Gelu(torch.nn.Module):
         return self.gelu(x)
 
 
+class GroupNorm(torch.nn.Module):
+    def __init__(self, bias=True):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(
+            32,
+            256,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=bias,
+        )
+        self.norm = torch.nn.GroupNorm(32, 256)
+
+    def forward(self, x):
+        y = self.conv(x)
+        return y, self.norm(y)
+
+
 class HardSigmoid(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -531,8 +549,8 @@ class HardTanh(torch.nn.Module):
 class Index(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.idx0 = torch.tensor([[0, 1], [2, 3], [4, 5]])
-        self.idx1 = torch.tensor([[1, 2], [3, 4], [5, 6]])
+        self.idx0 = torch.tensor([[0, 1], [2, 3], [4, 5]], dtype=torch.int32)
+        self.idx1 = torch.tensor([[1, 2], [3, 4], [5, 6]], dtype=torch.int32)
 
     def forward(self, x):
         return x[self.idx0] + x[self.idx1]

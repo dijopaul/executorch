@@ -17,6 +17,8 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
 
+from executorch.backends.arm.test.common import arm_test_options, is_option_enabled
+
 from torch.export import ExportedProgram
 from torch.fx.node import Node
 
@@ -101,7 +103,7 @@ def _get_input_quantization_params(
             ):  # break early if we have all the inputs quantized parameters
                 break
     if len(quant_params) == 0:
-        raise RuntimeError("No Quantization parameters not found in exported model.")
+        raise RuntimeError("No Quantization parameters found in exported model.")
     return quant_params
 
 
@@ -249,6 +251,10 @@ class RunnerUtil:
         for input_path in input_paths:
             cmd_line += f" -i {input_path}"
 
+        ethos_u_extra_args = ""
+        if is_option_enabled(arm_test_options.fast_fvp):
+            ethos_u_extra_args = ethos_u_extra_args + "--fast"
+
         command_args = {
             "corstone-300": [
                 "FVP_Corstone_SSE-300_Ethos-U55",
@@ -267,6 +273,8 @@ class RunnerUtil:
                 "-C",
                 "cpu0.semihosting-stack_base=0",
                 "-C",
+                f"ethosu.extra_args='{ethos_u_extra_args}'",
+                "-C",
                 "cpu0.semihosting-heap_limit=0",
                 "-C",
                 f"cpu0.semihosting-cmd_line='{cmd_line}'",
@@ -282,6 +290,8 @@ class RunnerUtil:
                 "-C",
                 "mps4_board.visualisation.disable-visualisation=1",
                 "-C",
+                "vis_hdlcd.disable_visualisation=1",
+                "-C",
                 "mps4_board.telnetterminal0.start_telnet=0",
                 "-C",
                 "mps4_board.uart0.out_file='-'",
@@ -295,6 +305,8 @@ class RunnerUtil:
                 "mps4_board.subsystem.cpu0.semihosting-stack_base=0",
                 "-C",
                 "mps4_board.subsystem.cpu0.semihosting-heap_limit=0",
+                "-C",
+                f"mps4_board.subsystem.ethosu.extra_args='{ethos_u_extra_args}'",
                 "-C",
                 f"mps4_board.subsystem.cpu0.semihosting-cmd_line='{cmd_line}'",
                 "-a",
@@ -448,8 +460,11 @@ class RunnerUtil:
                 ), "There are no quantization parameters, check output parameters"
                 tosa_ref_output = (tosa_ref_output - quant_param.zp) * quant_param.scale
 
+            if tosa_ref_output.dtype == np.double:
+                tosa_ref_output = tosa_ref_output.astype("float32")
+
             # tosa_output is a numpy array, convert to torch tensor for comparison
-            tosa_ref_outputs.append(torch.from_numpy(tosa_ref_output.astype("float32")))
+            tosa_ref_outputs.append(torch.from_numpy(tosa_ref_output))
 
         return tosa_ref_outputs
 
@@ -457,7 +472,9 @@ class RunnerUtil:
 def prep_data_for_save(
     data, is_quantized: bool, input_name: str, quant_param: QuantizationParams
 ):
-    data_np = np.array(data.detach(), order="C").astype(np.float32)
+    data_np = np.array(data.detach(), order="C").astype(
+        f"{data.dtype}".replace("torch.", "")
+    )
 
     if is_quantized:
         assert quant_param.node_name in input_name, (

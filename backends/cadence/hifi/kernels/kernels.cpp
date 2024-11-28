@@ -170,6 +170,7 @@ void requantize(
 typed_quantize_val(int8_t);
 typed_quantize_val(uint8_t);
 typed_quantize_val(int16_t);
+typed_quantize_val(uint16_t);
 #undef typed_quantize_val
 
 #define typed_quantize_vec(dtype)  \
@@ -182,6 +183,7 @@ typed_quantize_val(int16_t);
 typed_quantize_vec(int8_t);
 typed_quantize_vec(uint8_t);
 typed_quantize_vec(int16_t);
+typed_quantize_vec(uint16_t);
 typed_quantize_vec(int32_t);
 #undef typed_quantize_vec
 
@@ -191,6 +193,7 @@ typed_quantize_vec(int32_t);
 typed_dequantize_val(int8_t);
 typed_dequantize_val(uint8_t);
 typed_dequantize_val(int16_t);
+typed_dequantize_val(uint16_t);
 #undef typed_dequantize_val
 
 #define typed_dequantize_vec(dtype) \
@@ -203,6 +206,7 @@ typed_dequantize_val(int16_t);
 typed_dequantize_vec(int8_t);
 typed_dequantize_vec(uint8_t);
 typed_dequantize_vec(int16_t);
+typed_dequantize_vec(uint16_t);
 typed_dequantize_vec(int32_t);
 #undef typed_dequantize_vec
 
