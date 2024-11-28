@@ -64,9 +64,11 @@ Tensor& atan2_out(
   if (optimized) {
     if (broadcast) {
       WORD32* __restrict__ ptr1 =
-          (WORD32* __restrict__)malloc(num_elm * sizeof(WORD32));
+          (WORD32* __restrict__)kernels::allocate_temp_memory(
+              ctx, num_elm * sizeof(WORD32));
       WORD32* __restrict__ ptr2 =
-          (WORD32* __restrict__)malloc(num_elm * sizeof(WORD32));
+          (WORD32* __restrict__)kernels::allocate_temp_memory(
+              ctx, num_elm * sizeof(WORD32));
 
       WORD32* __restrict__ pin1 =
           (WORD32* __restrict__)a.const_data_ptr<float>();
@@ -84,11 +86,13 @@ Tensor& atan2_out(
       for (int i = 0; i < b_dim; i++)
         p_inp2_shape[i] = b.size(i);
 
-      WORD32 ret_val = xa_nn_broadcast_32_32(ptr1, p_out_shape, pin1, p_inp1_shape, out_dim);
+      WORD32 ret_val =
+          xa_nn_broadcast_32_32(ptr1, p_out_shape, pin1, p_inp1_shape, out_dim);
 
       ET_KERNEL_CHECK(ctx, ret_val == 0, Internal, out);
 
-      ret_val = xa_nn_broadcast_32_32(ptr2, p_out_shape, pin2, p_inp2_shape, out_dim);
+      ret_val =
+          xa_nn_broadcast_32_32(ptr2, p_out_shape, pin2, p_inp2_shape, out_dim);
 
       ET_KERNEL_CHECK(ctx, ret_val == 0, Internal, out);
 
@@ -103,7 +107,8 @@ Tensor& atan2_out(
       free(ptr2);
     } else if (a_is_broadcasted && (!b_is_broadcasted)) {
       FLOAT32* __restrict__ ptr1 =
-          (FLOAT32* __restrict__)malloc(num_elm * sizeof(WORD32));
+          (FLOAT32* __restrict__)kernels::allocate_temp_memory(
+              ctx, num_elm * sizeof(WORD32));
 
       FLOAT32* __restrict__ pin1 =
           (FLOAT32* __restrict__)a.const_data_ptr<float>();
@@ -132,7 +137,8 @@ Tensor& atan2_out(
       free(ptr1);
     } else if (b_is_broadcasted && (!a_is_broadcasted)) {
       WORD32* __restrict__ ptr1 =
-          (WORD32* __restrict__)malloc(num_elm * sizeof(WORD32));
+          (WORD32* __restrict__)kernels::allocate_temp_memory(
+              ctx, num_elm * sizeof(WORD32));
 
       WORD32* __restrict__ pin1 =
           (WORD32* __restrict__)b.const_data_ptr<float>();

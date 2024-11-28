@@ -29,12 +29,12 @@ using executorch::runtime::isIntegralType;
 using executorch::runtime::promoteTypes;
 using torch::executor::apply_ternary_elementwise_fn;
 using torch::executor::Error;
+using torch::executor::resize_to_broadcast_target_size;
 using torch::executor::native::utils::extract_scalar;
 using torch::executor::native::utils::get_scalar_dtype;
 using torch::executor::native::utils::max_override;
 using torch::executor::native::utils::min_override;
 using torch::executor::native::utils::promote_type_with_scalar;
-using torch::executor::resize_to_broadcast_target_size;
 
 namespace cadence {
 namespace impl {
@@ -280,7 +280,6 @@ Tensor& clamp_tensor_out(
             out_data, inp_data, max_data, out.numel());
 
         ET_KERNEL_CHECK(ctx, ret_val == 0, Internal, out);
-
       }
     } else if (!has_max) {
       const float* const min_data = min.const_data_ptr<float>();
@@ -318,7 +317,6 @@ Tensor& clamp_tensor_out(
             out_data, inp_data, min_data, out.numel());
 
         ET_KERNEL_CHECK(ctx, ret_val == 0, Internal, out);
-
       }
     } else {
       const float* const min_data = min.const_data_ptr<float>();
@@ -357,8 +355,10 @@ Tensor& clamp_tensor_out(
 
         if (inp_shape[0] != out_shape[0] || inp_shape[1] != out_shape[1] ||
             inp_shape[2] != out_shape[2] || inp_shape[3] != out_shape[3]) {
-          void* p_scratch =
-              malloc(out_shape[0] * out_shape[1] * out_shape[2] * out_shape[3]);
+          void* p_scratch = (void*)kernels::allocate_temp_memory(
+              ctx,
+              (out_shape[0] * out_shape[1] * out_shape[2] * out_shape[3]) *
+                  sizeof(int));
           const FLOAT32* p_brd_cond = (const FLOAT32*)p_scratch;
           xa_nn_broadcast_32_32(
               (WORD32*)p_brd_cond, out_shape, (WORD32*)inp_data, inp_shape, 4);
@@ -392,17 +392,15 @@ Tensor& clamp_tensor_out(
               max_shape);
 
           ET_KERNEL_CHECK(ctx, ret_val == 0, Internal, out);
-
         }
       } else {
         WORD32 ret_val = xa_nn_elm_clamp_f32xf32xf32_f32(
             out_data, inp_data, min_data, max_data, out.numel());
 
         ET_KERNEL_CHECK(ctx, ret_val == 0, Internal, out);
-
       }
     }
-  return out;
+    return out;
   }
 
   constexpr auto name = "clamp.Tensor_out";
