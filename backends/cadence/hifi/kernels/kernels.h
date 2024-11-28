@@ -45,6 +45,26 @@ extern "C" WORD32 xa_nn_elm_add_broadcast_4D_f32xf32_f32(
     const FLOAT32* __restrict__ p_inp2,
     const WORD32* const p_inp2_shape);
 
+extern "C" void
+xa_nn_elm_atan2_f32(FLOAT32* z, const FLOAT32* y, const FLOAT32* x, WORD32 N);
+
+extern "C" WORD32 xa_nn_elm_clamp_f32xf32xf32_f32(
+    FLOAT32* __restrict__ p_out,
+    const FLOAT32* __restrict__ p_inp,
+    const FLOAT32* __restrict__ p_min,
+    const FLOAT32* __restrict__ p_max,
+    WORD32 num_elm);
+
+extern "C" WORD32 xa_nn_elm_clamp_broadcast_4D_f32Xf32xf32_f32(
+    FLOAT32* __restrict__ p_out,
+    const WORD32* const p_out_shape,
+    const FLOAT32* __restrict__ p_inp,
+    const WORD32* const p_inp_shape,
+    const FLOAT32* __restrict__ p_min,
+    const WORD32* const p_min_shape,
+    const FLOAT32* __restrict__ p_max,
+    const WORD32* const p_max_shape);
+
 extern "C" WORD32 xa_nn_elm_div_broadcast_4D_f32xf32_f32(
     FLOAT32* __restrict__ p_out,
     const WORD32* const p_out_shape,
@@ -110,6 +130,20 @@ extern "C" void xa_nn_elm_pow_f32(
     const FLOAT32* restrict x,
     const FLOAT32* restrict y,
     WORD32 N);
+
+extern "C" WORD32 xa_nn_elm_remainder_f32xf32_f32(
+    FLOAT32* __restrict__ p_out,
+    const FLOAT32* __restrict__ p_inp1,
+    const FLOAT32* __restrict__ p_inp2,
+    WORD32 num_elm);
+
+extern "C" WORD32 xa_nn_elm_remainder_broadcast_4D_f32xf32_f32(
+    FLOAT32* __restrict__ p_out,
+    const WORD32* const p_out_shape,
+    const FLOAT32* __restrict__ p_inp1,
+    const WORD32* const p_inp1_shape,
+    const FLOAT32* __restrict__ p_inp2,
+    const WORD32* const p_inp2_shape);
 
 extern "C" WORD32 xa_nn_elm_where_f32xf32_f32(
     FLOAT32* __restrict__ p_out,

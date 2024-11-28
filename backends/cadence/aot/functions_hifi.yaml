@@ -20,7 +20,12 @@
 - op: _softmax.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::softmax_out
+      kernel_name: cadence::impl::HiFi::softmax_out
+
+- op: atan2.out
+  kernels:
+    - arg_meta: null
+      kernel_name: cadence::impl::HiFi::atan2_out
 
 - op: add.out
   kernels:
@@ -36,6 +41,11 @@
   kernels:
     - arg_meta: null
       kernel_name: cadence::impl::HiFi::cat_out
+
+- op: clamp.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: cadence::impl::HiFi::clamp_tensor_out
 
 - op: clone.out
   kernels:
@@ -106,6 +116,11 @@
   kernels:
     - arg_meta: null
       kernel_name: cadence::impl::HiFi::pow_Tensor_Tensor_out
+
+- op: remainder.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: cadence::impl::HiFi::remainder_Tensor_out
 
 - op: rsqrt.out
   kernels:

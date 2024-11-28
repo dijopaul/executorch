@@ -21,7 +21,9 @@ endif()
 # ATen compliant ops that are needed to run this model.
 set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_add.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_atan2.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_cat.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_clamp.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_div.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_full.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_maximum.cpp"
@@ -30,7 +32,9 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_mul.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_permute_copy.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_pow.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_remainder.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_rsqrt.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_softmax.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sigmoid.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_sub.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_tanh.cpp"
@@ -40,7 +44,6 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_embedding.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_gt.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_slice_copy.cpp"
-    "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_softmax.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_split_with_sizes_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_to_copy.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/op_view_copy.cpp"
