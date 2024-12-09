@@ -45,7 +45,7 @@ WORD32 xa_nn_elm_logicalxor_boolxbool_bool(WORD8 * __restrict__ p_out,
     /* Remainder loop */
     #pragma no_unroll
     for(i=remainder_start; i < N; i++){
-        p_out[i] = p_inp1[i] & p_inp2[i];
+        p_out[i] = p_inp1[i] ^ p_inp2[i];
     }
 
     return 0;
