@@ -66,9 +66,14 @@ Tensor& atan2_out(
       WORD32* __restrict__ ptr1 =
           (WORD32* __restrict__)kernels::allocate_temp_memory(
               ctx, num_elm * sizeof(WORD32));
+
+      ET_KERNEL_CHECK(ctx, ptr1 != nullptr, MemoryAllocationFailed, out);
+
       WORD32* __restrict__ ptr2 =
           (WORD32* __restrict__)kernels::allocate_temp_memory(
               ctx, num_elm * sizeof(WORD32));
+
+      ET_KERNEL_CHECK(ctx, ptr2 != nullptr, MemoryAllocationFailed, out);
 
       WORD32* __restrict__ pin1 =
           (WORD32* __restrict__)a.const_data_ptr<float>();
@@ -108,8 +113,12 @@ Tensor& atan2_out(
           (FLOAT32* __restrict__)kernels::allocate_temp_memory(
               ctx, num_elm * sizeof(WORD32));
 
+      ET_KERNEL_CHECK(ctx, ptr1 != nullptr, MemoryAllocationFailed, out);
+
       FLOAT32* __restrict__ pin1 =
           (FLOAT32* __restrict__)a.const_data_ptr<float>();
+
+      ET_KERNEL_CHECK(ctx, pin1 != nullptr, MemoryAllocationFailed, out);
 
       WORD32 p_out_shape[kNnlibMaxDim];
       WORD32 p_inp1_shape[kNnlibMaxDim];
@@ -136,6 +145,8 @@ Tensor& atan2_out(
       WORD32* __restrict__ ptr1 =
           (WORD32* __restrict__)kernels::allocate_temp_memory(
               ctx, num_elm * sizeof(WORD32));
+
+      ET_KERNEL_CHECK(ctx, ptr1 != nullptr, MemoryAllocationFailed, out);
 
       WORD32* __restrict__ pin1 =
           (WORD32* __restrict__)b.const_data_ptr<float>();
