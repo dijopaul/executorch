@@ -118,8 +118,6 @@ Tensor& atan2_out(
       FLOAT32* __restrict__ pin1 =
           (FLOAT32* __restrict__)a.const_data_ptr<float>();
 
-      ET_KERNEL_CHECK(ctx, pin1 != nullptr, MemoryAllocationFailed, out);
-
       WORD32 p_out_shape[kNnlibMaxDim];
       WORD32 p_inp1_shape[kNnlibMaxDim];
 
