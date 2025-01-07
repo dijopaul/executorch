@@ -592,14 +592,15 @@ WORD32 xa_nn_elm_where_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
     inp2_strides[i] = AE_MOVAD32_L(d_str);
   }
 
-  int need_broadcast = 0;
+  int need_broadcast_1 = 0;
+  int need_broadcast_2 = 0;
   int inp1_const = 1, inp2_const = 1;
   for(i = 0; i < 4; i++)
   {
       if(p_inp1_shape[i] == 1)
       {
           inp1_strides[i] = 0;
-          need_broadcast = 1;
+          need_broadcast_1 = 1;
       }
       else
       {
@@ -608,7 +609,7 @@ WORD32 xa_nn_elm_where_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
       if(p_inp2_shape[i] == 1)
       {
           inp2_strides[i] = 0;
-          need_broadcast = 1;
+          need_broadcast_2 = 1;
       }
       else
       {
@@ -622,7 +623,7 @@ WORD32 xa_nn_elm_where_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
   const FLOAT32 *__restrict__ p_inp1_tmp = p_inp1;
   const FLOAT32 *__restrict__ p_inp2_tmp = p_inp2;
 
-  if(need_broadcast == 0)
+  if(!(need_broadcast_1 || need_broadcast_2))
   {
     sign_flag = 0;
     internal_elm_where_broadcast_2D_f32xf32_f32(
@@ -716,21 +717,19 @@ WORD32 xa_nn_elm_where_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
         }
     }
   }
-  else if(inp1_const == 1 || inp2_const == 1)
+  else if((inp1_const == 1) && (inp2_const == 1))
   {
-    if((inp1_const == 1)&&(inp2_const == 1))
-    {
-        internal_elm_where_broadcast_both_f32xf32_f32(
-            p_out_tmp,
-            p_inp1_tmp,
-            p_inp2_tmp,
-            p_condition_temp,
-            p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3]);
-    }
-    else
-    {
+    internal_elm_where_broadcast_both_f32xf32_f32(
+        p_out_tmp,
+        p_inp1_tmp,
+        p_inp2_tmp,
+        p_condition_temp,
+        p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3]);
+  }
+  else if((inp1_const && (!need_broadcast_2))||(inp2_const && (!need_broadcast_1)))
+  {
         sign_flag = 0;
-        if(inp1_strides[3] == 0)
+        if(inp1_const == 1)
         {
           sign_flag = 1;
           const FLOAT32 *tmp;
@@ -743,7 +742,6 @@ WORD32 xa_nn_elm_where_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
             p_condition_temp,
             p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3],
             sign_flag);
-    }
   }
   else
   {
