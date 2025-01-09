@@ -172,7 +172,7 @@ static void internal_elm_clamp_broadcast_f32xf32xf32_f32(FLOAT32 * __restrict__ 
       XT_LSIP(a0_7, (xtfloat *)p_a, sizeof(FLOAT32));
       XT_LSIP(in0, (xtfloat *)input, 0); 
       out = XT_MAX_S(in0, x2); 
-      out = XT_MIN_S(out, a0_7);  	  
+      out = XT_MIN_S(out, a0_7);
       XT_SSI(out, (xtfloat *)p_c, 0);
     }
   }
@@ -553,14 +553,15 @@ WORD32 xa_nn_elm_clamp_broadcast_4D_f32Xf32xf32_f32(FLOAT32 * __restrict__ p_out
     max_strides[i] = AE_MOVAD32_L(d_str);    
   }
 
-  int need_broadcast = 0;
+  int need_broadcast_min = 0;
+  int need_broadcast_max = 0;
   int min_const = 1, max_const = 1;
   for(i = 0; i < 4; i++)
   {
       if(p_min_shape[i] == 1)
       {
           min_strides[i] = 0;
-          need_broadcast = 1;
+          need_broadcast_min = 1;
       }
       else
       {
@@ -569,7 +570,7 @@ WORD32 xa_nn_elm_clamp_broadcast_4D_f32Xf32xf32_f32(FLOAT32 * __restrict__ p_out
       if(p_max_shape[i] == 1)
       {
           max_strides[i] = 0;
-          need_broadcast = 1;
+          need_broadcast_max = 1;
       }
       else
       {
@@ -583,7 +584,7 @@ WORD32 xa_nn_elm_clamp_broadcast_4D_f32Xf32xf32_f32(FLOAT32 * __restrict__ p_out
   const FLOAT32 *__restrict__ p_min_tmp = p_min;
   const FLOAT32 *__restrict__ p_max_tmp = p_max;
 
-  if(need_broadcast == 0)
+  if(!(need_broadcast_min || need_broadcast_max))
   {
     sign_flag = 0;
     internal_elm_clamp_broadcast_2D_f32xf32xf32_f32(
@@ -677,21 +678,19 @@ WORD32 xa_nn_elm_clamp_broadcast_4D_f32Xf32xf32_f32(FLOAT32 * __restrict__ p_out
         }
     }
   }
-  else if(min_const == 1 || max_const == 1)
+  else if((min_const == 1)&&(max_const == 1))
   {
-    if((min_const == 1)&&(max_const == 1))
-    {
-        internal_elm_clamp_broadcast_both_f32xf32xf32_f32(
-            p_out_tmp,
-            p_min_tmp,
-            p_max_tmp,
-            p_inp_temp,
-            p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3]);
-    }
-    else
-    {
+    internal_elm_clamp_broadcast_both_f32xf32xf32_f32(
+        p_out_tmp,
+        p_min_tmp,
+        p_max_tmp,
+        p_inp_temp,
+        p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3]);
+  }
+  else if((min_const && (!need_broadcast_max))||(max_const && (!need_broadcast_min)))
+  {
         sign_flag = 0;
-        if(min_strides[3] == 0)
+        if(min_const == 1)
         {
           sign_flag = 1;
           const FLOAT32 *tmp;
@@ -704,7 +703,6 @@ WORD32 xa_nn_elm_clamp_broadcast_4D_f32Xf32xf32_f32(FLOAT32 * __restrict__ p_out
             p_inp_temp,
             p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3],
             sign_flag);
-    }
   }
   else
   {
