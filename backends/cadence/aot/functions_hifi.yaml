@@ -65,7 +65,7 @@
 - op: embedding.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::embedding_out
+      kernel_name: cadence::impl::HiFi::embedding_out
 
 - op: full.out
   kernels:
@@ -86,6 +86,11 @@
   kernels:
     - arg_meta: null
       kernel_name: torch::executor::hardtanh_out
+
+- op: masked_fill.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: cadence::impl::HiFi::masked_fill_scalar_out
 
 - op: max_pool2d_with_indices.out
   kernels:
@@ -150,12 +155,17 @@
 - op: slice_copy.Tensor_out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::slice_copy_Tensor_out
+      kernel_name: cadence::impl::HiFi::slice_copy_Tensor_out
+
+- op: split_copy.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: cadence::impl::HiFi::split_copy_Tensor_out
 
 - op: split_with_sizes_copy.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::split_with_sizes_copy_out
+      kernel_name: cadence::impl::HiFi::split_with_sizes_copy_out
 
 - op: sub.out
   kernels:
@@ -170,7 +180,7 @@
 - op: view_copy.out
   kernels:
     - arg_meta: null
-      kernel_name: torch::executor::view_copy_out
+      kernel_name: cadence::impl::HiFi::view_copy_out
 
 - op: where.self_out
   kernels:
