@@ -13,9 +13,9 @@
 
 #include <executorch/backends/cadence/hifi/kernels/kernels.h>
 
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
 using executorch::aten::RuntimeContext;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using executorch::runtime::ArrayRef;
 using torch::executor::Error;
 using torch::executor::optional;
@@ -128,6 +128,8 @@ Tensor& mean_dim_out(
     void* __restrict__ p_scratch_in =
         (void* __restrict__)kernels::allocate_temp_memory(
             ctx, scratch_size * sizeof(int));
+
+    ET_KERNEL_CHECK(ctx, p_scratch_in != nullptr, MemoryAllocationFailed, out);
 
     xa_nn_reduce_mean_4D_f32_f32(
         p_out,
