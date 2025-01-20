@@ -134,7 +134,6 @@ Tensor& bmm_out(
           out_stride);
     }
 
-    free(tmp);
     return out;
   }
 
