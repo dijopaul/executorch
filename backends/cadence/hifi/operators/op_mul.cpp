@@ -15,13 +15,19 @@
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include <executorch/runtime/platform/assert.h>
 
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
 using executorch::aten::RuntimeContext;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using executorch::runtime::can_cast;
 using executorch::runtime::CppTypeToScalarType;
+using executorch::runtime::tensors_have_same_dim_order;
 using torch::executor::Error;
+using torch::executor::native::utils::apply_unitensor_elementwise_fn;
+using torch::executor::native::utils::get_compute_type;
+using torch::executor::native::utils::promote_type_with_scalar;
+using torch::executor::native::utils::scalar_to;
+using torch::executor::native::utils::SupportedTensorDtypes;
 
 namespace cadence {
 namespace impl {
@@ -137,18 +143,23 @@ mul_out(RuntimeContext& ctx, const Tensor& a, const Tensor& b, Tensor& out) {
       for (int i = 0; i < b.dim(); i++)
         inp2_shape[i + off_b] = b.size(i);
 
-      xa_nn_elm_mul_broadcast_4D_f32xf32_f32(
+      WORD32 ret_val = xa_nn_elm_mul_broadcast_4D_f32xf32_f32(
           out_data, out_shape, a_data, inp1_shape, b_data, inp2_shape);
+
+      ET_KERNEL_CHECK(ctx, ret_val == 0, Internal, out);
+
     } else {
-      xa_nn_elm_mul_f32xf32_f32(out_data, a_data, b_data, out.numel());
+      WORD32 ret_val =
+          xa_nn_elm_mul_f32xf32_f32(out_data, a_data, b_data, out.numel());
+
+      ET_KERNEL_CHECK(ctx, ret_val == 0, Internal, out);
     }
 
     return out;
   }
 
   // Compute Dtype
-  ScalarType compute_type =
-      torch::executor::native::utils::get_compute_type(common_type);
+  ScalarType compute_type = get_compute_type(common_type);
 
   // @lint-ignore CLANGTIDY facebook-hte-CArray
   static constexpr const char op_name[] = "mul.Scalar_out";
@@ -161,11 +172,93 @@ mul_out(RuntimeContext& ctx, const Tensor& a, const Tensor& b, Tensor& out) {
             },
             ctx,
             a,
-            torch::executor::native::utils::SupportedTensorDtypes::REALHBBF16,
+            SupportedTensorDtypes::REALHBBF16,
             b,
-            torch::executor::native::utils::SupportedTensorDtypes::REALHBBF16,
+            SupportedTensorDtypes::REALHBBF16,
             out,
-            torch::executor::native::utils::SupportedTensorDtypes::REALHBBF16);
+            SupportedTensorDtypes::REALHBBF16);
+  });
+
+  return out;
+}
+
+Tensor& mul_scalar_out(
+    KernelRuntimeContext& ctx,
+    const Tensor& a,
+    const Scalar& b,
+    Tensor& out) {
+  // Common Dtype
+  ScalarType common_type = promote_type_with_scalar(a.scalar_type(), b);
+
+  // Check Common Dtype
+  ET_KERNEL_CHECK(ctx, common_type == out.scalar_type(), InvalidArgument, out);
+
+  // Check Dim Order
+  ET_KERNEL_CHECK(
+      ctx, tensors_have_same_dim_order(a, out), InvalidArgument, out);
+
+  // Resize
+  ET_KERNEL_CHECK(
+      ctx, resize_tensor(out, a.sizes()) == Error::Ok, InvalidArgument, out);
+
+  // Compute Dtype
+  ScalarType compute_type = get_compute_type(common_type);
+
+  constexpr int kNnlibMaxDim = 4; /*fallback if broadcast and dim > 4 */
+
+  int a_dim = a.dim();
+  bool optimized = 1;
+
+  if (common_type != ScalarType::Float)
+    optimized = 0;
+
+  if (a_dim == 0)
+    optimized = 0;
+
+  if ((a_dim > kNnlibMaxDim))
+    optimized = 0;
+
+  if (optimized) {
+    float* a_data = a.mutable_data_ptr<float>();
+    const float val_b = scalar_to<float>(b);
+    float* b_data = (float*)&(val_b);
+    float* out_data = out.mutable_data_ptr<float>();
+
+    int out_shape[kNnlibMaxDim];
+    int inp1_shape[kNnlibMaxDim];
+    int inp2_shape[kNnlibMaxDim];
+    for (int i = 0; i < kNnlibMaxDim; i++) {
+      out_shape[i] = 1;
+      inp1_shape[i] = 1;
+      inp2_shape[i] = 1;
+    }
+    int off_o = kNnlibMaxDim - out.dim();
+    int off_a = kNnlibMaxDim - a.dim();
+    int off_b = kNnlibMaxDim;
+    for (int i = 0; i < out.dim(); i++)
+      out_shape[i + off_o] = out.size(i);
+    for (int i = 0; i < a.dim(); i++)
+      inp1_shape[i + off_a] = a.size(i);
+
+    WORD32 ret_val = xa_nn_elm_mul_broadcast_4D_f32xf32_f32(
+        out_data, out_shape, a_data, inp1_shape, b_data, inp2_shape);
+
+    ET_KERNEL_CHECK(ctx, ret_val == 0, Internal, out);
+
+    return out;
+  }
+  // @lint-ignore CLANGTIDY facebook-hte-CArray
+  static constexpr const char op_name[] = "mul.Scalar_out";
+
+  ET_SWITCH_REALB_TYPES(compute_type, ctx, op_name, CTYPE_COMPUTE, [&]() {
+    const CTYPE_COMPUTE val_b = scalar_to<CTYPE_COMPUTE>(b);
+    apply_unitensor_elementwise_fn<CTYPE_COMPUTE, op_name>(
+        [val_b](const CTYPE_COMPUTE val_a) { return val_a * val_b; },
+        ctx,
+        a,
+        SupportedTensorDtypes::REALHBBF16,
+        out,
+        SupportedTensorDtypes::SAME_AS_COMMON);
   });
 
   return out;

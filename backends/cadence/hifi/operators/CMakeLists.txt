@@ -48,6 +48,7 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_pow.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_remainder.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_rsqrt.cpp"
+    "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_select_copy.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_slice_copy.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_softmax.cpp"
     "${EXECUTORCH_ROOT}/backends/cadence/hifi/operators/op_split_copy.cpp"
@@ -72,6 +73,7 @@ set(_aten_ops__srcs
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/matmul_ops_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/reduce_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/repeat_util.cpp"
+    "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/select_copy_util.cpp"
     "${EXECUTORCH_ROOT}/kernels/portable/cpu/util/slice_util.cpp"
     )
 add_library(aten_ops_cadence ${_aten_ops__srcs})
@@ -88,8 +90,8 @@ target_include_directories(
 
 # Custom ops that are needed to run the test model.
 add_library(
-  custom_ops "quantized_linear_out.cpp" "quantized_layer_norm.cpp"
-             "quantize_per_tensor.cpp" "quantized_relu_out.cpp" "dequantize_per_tensor.cpp"
+  custom_ops "dequantize_per_tensor.cpp" "quantized_matmul_out.cpp" "quantized_linear_out.cpp" "quantized_layer_norm.cpp"
+             "quantize_per_tensor.cpp" "quantized_relu_out.cpp" 
 )
 target_include_directories(
   custom_ops PUBLIC ${ROOT_DIR}/.. ${CMAKE_BINARY_DIR}
