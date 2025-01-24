@@ -212,10 +212,7 @@ Tensor& mul_scalar_out(
   if (common_type != ScalarType::Float)
     optimized = 0;
 
-  if (a_dim == 0)
-    optimized = 0;
-
-  if ((a_dim > kNnlibMaxDim))
+  if ((a_dim == 0) || (a_dim > kNnlibMaxDim))
     optimized = 0;
 
   if (optimized) {
