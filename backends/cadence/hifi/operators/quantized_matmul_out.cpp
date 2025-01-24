@@ -6,13 +6,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <executorch/runtime/kernel/kernel_includes.h>
 #include <executorch/backends/cadence/hifi/kernels/kernels.h>
+#include <executorch/runtime/kernel/kernel_includes.h>
 #include <stdlib.h>
 
-using executorch::runtime::getLeadingDims;
 using executorch::aten::ScalarType;
 using executorch::aten::Tensor;
+using executorch::runtime::getLeadingDims;
 using torch::executor::RuntimeContext;
 
 namespace cadence {
@@ -45,26 +45,29 @@ void inline _typed_quantized_matmul(
   size_t in_dim = X.size(X.dim() - 1);
 
   const int32_t* __restrict__ bias_data =
-          (WORD32* __restrict__)kernels::allocate_temp_memory(
-              ctx, (leading_dim * in_dim) * sizeof(int32_t));
+      (WORD32* __restrict__)kernels::allocate_temp_memory(
+          ctx, (leading_dim * in_dim) * sizeof(int32_t));
 
   ET_CHECK_MSG(bias_data != nullptr, "MemoryAllocationFailed");
 
-  std::memset((void *)bias_data, 0, (leading_dim * in_dim)*sizeof(int32_t));
+  std::memset((void*)bias_data, 0, (leading_dim * in_dim) * sizeof(int32_t));
 
-  uint8_t *y_data_temp = NULL;
+  uint8_t* y_data_temp = NULL;
 
-  if (!transposed)
-      y_data_temp = (uint8_t *)malloc(leading_dim * in_dim);
-       
+  if (!transposed) {
+    y_data_temp =
+        (uint8_t*)kernels::allocate_temp_memory(ctx, (leading_dim * in_dim));
+
+    ET_CHECK_MSG(y_data_temp != nullptr, "MemoryAllocationFailed");
+  }
+
   for (size_t i = 0; i < batch_size; ++i) {
     const T* x = X_data + i * leading_dim * in_dim;
     const T* y = Y_data + i * in_dim * out_dim;
     T* z = out_data + i * leading_dim * out_dim;
     if (transposed) {
-        if(out.scalar_type() == exec_aten::ScalarType::Byte){
-
-            WORD32 ret_val = xa_nn_matmul_asym8uxasym8u_asym8u(
+      if (out.scalar_type() == exec_aten::ScalarType::Byte) {
+        WORD32 ret_val = xa_nn_matmul_asym8uxasym8u_asym8u(
             (uint8_t*)z, // p_out
             (uint8_t*)y, // p_mat1,
             (uint8_t*)x, // p_mat2,
@@ -82,11 +85,9 @@ void inline _typed_quantized_matmul(
             static_cast<int32_t>(out_shift), // out_shift
             static_cast<int32_t>(out_zero_point)); // out_zero_bias
 
-            ET_CHECK_MSG(ret_val == 0, "An internal error occured");
-        }
-        else{
-
-            WORD32 ret_val = xa_nn_matmul_asym8sxasym8s_asym8s(
+        ET_CHECK_MSG(ret_val == 0, "An internal error occured");
+      } else {
+        WORD32 ret_val = xa_nn_matmul_asym8sxasym8s_asym8s(
             (int8_t*)z, // p_out
             (int8_t*)y, // p_mat1,
             (int8_t*)x, // p_mat2,
@@ -104,37 +105,35 @@ void inline _typed_quantized_matmul(
             static_cast<int32_t>(out_shift), // out_shift
             static_cast<int32_t>(out_zero_point)); // out_zero_bias
 
-            ET_CHECK_MSG(ret_val == 0, "An internal error occured");
-        }
-    }
-    else {
-            /* Assuming matmul is 2D always */
-            WORD32 num_inp_dims = 2;
-            WORD32 num_out_dims = 2;
-        
-            WORD32 p_inp_shape[2];
-            WORD32 p_out_shape[2];
-            WORD32 p_permute_vec[2] = {1, 0};
-            
-            p_inp_shape[0] = leading_dim;
-            p_inp_shape[1] = in_dim;
-            p_out_shape[0] = in_dim;
-            p_out_shape[1] = leading_dim;
-        
-        
-            WORD32 ret_val = xa_nn_transpose_8_8((int8_t *)y_data_temp
-                                 ,p_out_shape
-                                 ,(int8_t *)y
-                                 ,p_inp_shape
-                                 ,p_permute_vec
-                                 ,num_out_dims
-                                 ,num_inp_dims);
+        ET_CHECK_MSG(ret_val == 0, "An internal error occured");
+      }
+    } else {
+      /* Assuming matmul is 2D always */
+      WORD32 num_inp_dims = 2;
+      WORD32 num_out_dims = 2;
 
-            ET_CHECK_MSG(ret_val == 0, "An internal error occured");
+      WORD32 p_inp_shape[2];
+      WORD32 p_out_shape[2];
+      WORD32 p_permute_vec[2] = {1, 0};
 
-        if(out.scalar_type() == exec_aten::ScalarType::Byte){
+      p_inp_shape[0] = leading_dim;
+      p_inp_shape[1] = in_dim;
+      p_out_shape[0] = in_dim;
+      p_out_shape[1] = leading_dim;
 
-            WORD32 ret_val = xa_nn_matmul_asym8uxasym8u_asym8u(
+      WORD32 ret_val = xa_nn_transpose_8_8(
+          (int8_t*)y_data_temp,
+          p_out_shape,
+          (int8_t*)y,
+          p_inp_shape,
+          p_permute_vec,
+          num_out_dims,
+          num_inp_dims);
+
+      ET_CHECK_MSG(ret_val == 0, "An internal error occured");
+
+      if (out.scalar_type() == exec_aten::ScalarType::Byte) {
+        WORD32 ret_val = xa_nn_matmul_asym8uxasym8u_asym8u(
             (uint8_t*)z, // p_out
             (uint8_t*)y_data_temp, // p_mat1,
             (uint8_t*)x, // p_mat2,
@@ -152,10 +151,9 @@ void inline _typed_quantized_matmul(
             static_cast<int32_t>(out_shift), // out_shift
             static_cast<int32_t>(out_zero_point)); // out_zero_bias
 
-            ET_CHECK_MSG(ret_val == 0, "An internal error occured");
-        }
-        else{
-            WORD32 ret_val = xa_nn_matmul_asym8sxasym8s_asym8s(
+        ET_CHECK_MSG(ret_val == 0, "An internal error occured");
+      } else {
+        WORD32 ret_val = xa_nn_matmul_asym8sxasym8s_asym8s(
             (int8_t*)z, // p_out
             (int8_t*)y_data_temp, // p_mat1,
             (int8_t*)x, // p_mat2,
@@ -173,12 +171,10 @@ void inline _typed_quantized_matmul(
             static_cast<int32_t>(out_shift), // out_shift
             static_cast<int32_t>(out_zero_point)); // out_zero_bias
 
-            ET_CHECK_MSG(ret_val == 0, "An internal error occured");
-        }
+        ET_CHECK_MSG(ret_val == 0, "An internal error occured");
+      }
     }
   }
-  if(y_data_temp != NULL)
-    free(y_data_temp);
 }
 
 void quantized_matmul_out(
@@ -197,7 +193,6 @@ void quantized_matmul_out(
   size_t leading_dim = X.size(X.dim() - 2);
   size_t out_dim = Y.size(Y.dim() - 1 - transposed);
   size_t in_dim = X.size(X.dim() - 1);
-  
 
   if (out.scalar_type() == exec_aten::ScalarType::Byte) {
     _typed_quantized_matmul<uint8_t>(
@@ -212,7 +207,7 @@ void quantized_matmul_out(
         out_zero_point,
         transposed,
         out);
-      
+
   } else if (out.scalar_type() == exec_aten::ScalarType::Char) {
     _typed_quantized_matmul<int8_t>(
         ctx,
