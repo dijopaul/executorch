@@ -112,6 +112,11 @@
     - arg_meta: null
       kernel_name: cadence::impl::HiFi::full_out
 
+- op: ge.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: cadence::impl::HiFi::ge_scalar_out
+
 - op: ge.Tensor_out
   kernels:
     - arg_meta: null
@@ -127,6 +132,11 @@
     - arg_meta: null
       kernel_name: cadence::impl::HiFi::gt_scalar_out
 
+- op: gt.Tensor_out
+  kernels:
+    - arg_meta: null
+      kernel_name: cadence::impl::HiFi::gt_tensor_out
+
 - op: eq.Tensor_out
   kernels:
     - arg_meta: null
@@ -137,10 +147,20 @@
     - arg_meta: null
       kernel_name: torch::executor::hardtanh_out
 
+- op: le.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: cadence::impl::HiFi::le_scalar_out
+
 - op: le.Tensor_out
   kernels:
     - arg_meta: null
       kernel_name: cadence::impl::HiFi::le_tensor_out
+
+- op: lt.Scalar_out
+  kernels:
+    - arg_meta: null
+      kernel_name: cadence::impl::HiFi::lt_scalar_out
 
 - op: lt.Tensor_out
   kernels:
