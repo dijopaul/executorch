@@ -54,7 +54,7 @@ WORD32 xa_nn_elm_greater_lesser_equal_f32xf32_f32(WORD8 * __restrict__ p_out,
               XT_LSX2IP(x1, inp1, 2*sizeof(FLOAT32));
               XT_LSX2IP(x2, inp2, 2*sizeof(FLOAT32));
               
-              //y = XT_SUB_SX2(x2, x1);
+              /*y = XT_SUB_SX2(x2, x1);*/
               xtbool2 check = xtfloatx2_LE_xtfloatx2(x2, x1);
               
               uint8_t val = AE_MOVAB2(check);
