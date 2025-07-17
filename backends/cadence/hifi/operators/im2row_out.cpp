@@ -167,16 +167,15 @@ void im2row_out(
   bool per_tensor_quantized = in_zero_point.numel() == 1;
 
   bool optimized = false;
-  if(input.scalar_type() == ScalarType::Char || input.scalar_type() == ScalarType::Byte)
+  if (input.scalar_type() == ScalarType::Char ||
+      input.scalar_type() == ScalarType::Byte)
     optimized = true;
 
-  if(!optimized) {
+  if (!optimized) {
     WORD8* ptr1 = (WORD8*)kernels::allocate_temp_memory(
-          ctx,
-          ((batch_size * in_c * in_h * in_w) + 8) *
-              sizeof(WORD8));
+        ctx, ((batch_size * in_c * in_h * in_w) + 8) * sizeof(WORD8));
 
-    WORD8* pin = (WORD8*)ALIGN_PTR(ptr1, 8);              
+    WORD8* pin = (WORD8*)ALIGN_PTR(ptr1, 8);
 
     WORD32 p_inp_shape[4];
     p_inp_shape[0] = input.size(0);
@@ -189,49 +188,48 @@ void im2row_out(
     p_out_shape[1] = in_h;
     p_out_shape[2] = in_w;
     p_out_shape[3] = in_c;
-    
+
     WORD32 p_permute_vec[4] = {0, 2, 3, 1};
 
     WORD8* __restrict__ p_inp =
-          (WORD8* __restrict__)input.const_data_ptr<int8_t>();
+        (WORD8* __restrict__)input.const_data_ptr<int8_t>();
 
     xa_nn_transpose_8_8(
-            pin,
-            p_out_shape,
-            p_inp,
-            p_inp_shape,
-            p_permute_vec,
-            4, // input dimensions
-            4); // output dimensions
+        pin,
+        p_out_shape,
+        p_inp,
+        p_inp_shape,
+        p_permute_vec,
+        4, // input dimensions
+        4); // output dimensions
 
     const int8_t* __restrict__ in_data = pin;
-    int8_t* __restrict__ out_data = out.mutable_data_ptr<int8_t>();      
-    const int32_t* __restrict__ zero_point =                           
-        in_zero_point.const_data_ptr<int32_t>();                       
-    int32_t in_plane = in_c * in_h * in_w;                             
-    int32_t out_plane = kernel_h * kernel_w * in_c * out_h * out_w;    
-    for (size_t n = 0; n < batch_size; ++n) {  
-        xa_nn_im2row_quantized(                                                 
-          &in_data[n * in_plane],                                      
-          per_tensor_quantized ? zero_point[0] : zero_point[n],        
-          in_c,                                                        
-          in_h,                                                        
-          in_w,                                                        
-          out_h,                                                       
-          out_w,                                                       
-          kernel_h,                                                    
-          kernel_w,                                                    
-          pad_h,                                                       
-          pad_w,                                                       
-          stride_h,                                                    
-          stride_w,                                                    
-          dilation_h,                                                  
-          dilation_w,                                                  
-          &out_data[n * out_plane],                                    
-          1/*channel_last*/);
+    int8_t* __restrict__ out_data = out.mutable_data_ptr<int8_t>();
+    const int32_t* __restrict__ zero_point =
+        in_zero_point.const_data_ptr<int32_t>();
+    int32_t in_plane = in_c * in_h * in_w;
+    int32_t out_plane = kernel_h * kernel_w * in_c * out_h * out_w;
+    for (size_t n = 0; n < batch_size; ++n) {
+      xa_nn_im2row_quantized(
+          &in_data[n * in_plane],
+          per_tensor_quantized ? zero_point[0] : zero_point[n],
+          in_c,
+          in_h,
+          in_w,
+          out_h,
+          out_w,
+          kernel_h,
+          kernel_w,
+          pad_h,
+          pad_w,
+          stride_h,
+          stride_w,
+          dilation_h,
+          dilation_w,
+          &out_data[n * out_plane],
+          1 /*channel_last*/);
     }
-  }
-  else {
+  } else {
 #define typed_im2row(dtype, ctype)                                     \
   case ScalarType::dtype: {                                            \
     const ctype* __restrict__ in_data = input.const_data_ptr<ctype>(); \
@@ -263,17 +261,17 @@ void im2row_out(
     break;                                                             \
   }
 
-  ScalarType dtype = input.scalar_type();
-  switch (dtype) {
-    typed_im2row(Float, float);
-    typed_im2row(Byte, uint8_t);
-    typed_im2row(Char, int8_t);
-    default:
-      ET_DCHECK_MSG(
-          false,
-          "im2row not implemented for dtype %s",
-          torch::executor::toString(dtype));
-  }
+    ScalarType dtype = input.scalar_type();
+    switch (dtype) {
+      typed_im2row(Float, float);
+      typed_im2row(Byte, uint8_t);
+      typed_im2row(Char, int8_t);
+      default:
+        ET_DCHECK_MSG(
+            false,
+            "im2row not implemented for dtype %s",
+            torch::executor::toString(dtype));
+    }
 #undef typed_im2row
   }
 }
@@ -320,18 +318,17 @@ void im2row_per_tensor_out(
   ET_DCHECK_MSG(
       (kernel_h * kernel_w * in_c) == out.size(2),
       "dimension mismatch for output");
-      
+
   bool optimized = false;
-  if(input.scalar_type() == ScalarType::Char || input.scalar_type() == ScalarType::Byte)
+  if (input.scalar_type() == ScalarType::Char ||
+      input.scalar_type() == ScalarType::Byte)
     optimized = true;
 
-  if(!optimized) {
+  if (!optimized) {
     WORD8* ptr1 = (WORD8*)kernels::allocate_temp_memory(
-          ctx,
-          ((batch_size * in_c * in_h * in_w) + 8) *
-              sizeof(WORD8));
+        ctx, ((batch_size * in_c * in_h * in_w) + 8) * sizeof(WORD8));
 
-    WORD8* pin = (WORD8*)ALIGN_PTR(ptr1, 8);              
+    WORD8* pin = (WORD8*)ALIGN_PTR(ptr1, 8);
 
     WORD32 p_inp_shape[4];
     p_inp_shape[0] = input.size(0);
@@ -344,47 +341,46 @@ void im2row_per_tensor_out(
     p_out_shape[1] = in_h;
     p_out_shape[2] = in_w;
     p_out_shape[3] = in_c;
-    
+
     WORD32 p_permute_vec[4] = {0, 2, 3, 1};
 
     WORD8* __restrict__ p_inp =
-          (WORD8* __restrict__)input.const_data_ptr<int8_t>();
+        (WORD8* __restrict__)input.const_data_ptr<int8_t>();
 
     xa_nn_transpose_8_8(
-            pin,
-            p_out_shape,
-            p_inp,
-            p_inp_shape,
-            p_permute_vec,
-            4, // input dimensions
-            4); // output dimensions
+        pin,
+        p_out_shape,
+        p_inp,
+        p_inp_shape,
+        p_permute_vec,
+        4, // input dimensions
+        4); // output dimensions
 
     const int8_t* __restrict__ in_data = pin;
-    int8_t* __restrict__ out_data = out.mutable_data_ptr<int8_t>();                            
-    int32_t in_plane = in_c * in_h * in_w;                             
-    int32_t out_plane = kernel_h * kernel_w * in_c * out_h * out_w;    
-    for (size_t n = 0; n < batch_size; ++n) {  
-        xa_nn_im2row_quantized(                                                 
-          &in_data[n * in_plane],                                      
-          (int32_t)in_zero_point,        
-          in_c,                                                        
-          in_h,                                                        
-          in_w,                                                        
-          out_h,                                                       
-          out_w,                                                       
-          kernel_h,                                                    
-          kernel_w,                                                    
-          pad_h,                                                       
-          pad_w,                                                       
-          stride_h,                                                    
-          stride_w,                                                    
-          dilation_h,                                                  
-          dilation_w,                                                  
-          &out_data[n * out_plane],                                    
-          1/*channel_last*/);
+    int8_t* __restrict__ out_data = out.mutable_data_ptr<int8_t>();
+    int32_t in_plane = in_c * in_h * in_w;
+    int32_t out_plane = kernel_h * kernel_w * in_c * out_h * out_w;
+    for (size_t n = 0; n < batch_size; ++n) {
+      xa_nn_im2row_quantized(
+          &in_data[n * in_plane],
+          (int32_t)in_zero_point,
+          in_c,
+          in_h,
+          in_w,
+          out_h,
+          out_w,
+          kernel_h,
+          kernel_w,
+          pad_h,
+          pad_w,
+          stride_h,
+          stride_w,
+          dilation_h,
+          dilation_w,
+          &out_data[n * out_plane],
+          1 /*channel_last*/);
     }
-  }
-  else {
+  } else {
 #define typed_im2row_per_tensor(dtype, ctype)                          \
   case ScalarType::dtype: {                                            \
     const ctype* __restrict__ in_data = input.const_data_ptr<ctype>(); \
@@ -414,17 +410,17 @@ void im2row_per_tensor_out(
     break;                                                             \
   }
 
-  ScalarType dtype = input.scalar_type();
-  switch (dtype) {
-    typed_im2row_per_tensor(Float, float);
-    typed_im2row_per_tensor(Byte, uint8_t);
-    typed_im2row_per_tensor(Char, int8_t);
-    default:
-      ET_DCHECK_MSG(
-          false,
-          "im2row.per_tensor not implemented for dtype %s",
-          torch::executor::toString(dtype));
-  }
+    ScalarType dtype = input.scalar_type();
+    switch (dtype) {
+      typed_im2row_per_tensor(Float, float);
+      typed_im2row_per_tensor(Byte, uint8_t);
+      typed_im2row_per_tensor(Char, int8_t);
+      default:
+        ET_DCHECK_MSG(
+            false,
+            "im2row.per_tensor not implemented for dtype %s",
+            torch::executor::toString(dtype));
+    }
 #undef typed_im2row_per_tensor
   }
 }
