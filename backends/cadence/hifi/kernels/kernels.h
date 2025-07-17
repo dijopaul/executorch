@@ -289,3 +289,4 @@ void dequantize(
 }; // namespace HiFi
 }; // namespace impl
 }; // namespace cadence
+
